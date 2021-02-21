@@ -7,6 +7,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Household
 import Theme
 
 
@@ -34,12 +35,25 @@ layoutName layout =
 
 type alias Model =
     { layoutMode : LayoutMode
+    , tasks : List Household.Task
     }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model Centered, Cmd.none )
+    ( { layoutMode = Centered
+      , tasks =
+            [ Household.Task 0
+                "Some task"
+                "This is just for testing. Don't worry about it."
+            , Household.Task
+                1
+                "Another task"
+                "This is just for testing. Don't worry about it."
+            ]
+      }
+    , Cmd.none
+    )
 
 
 
@@ -48,6 +62,7 @@ init =
 
 type Msg
     = SetLayoutMode LayoutMode
+    | AddTask Household.Task
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -56,9 +71,28 @@ update msg model =
         SetLayoutMode mode ->
             ( { model | layoutMode = mode }, Cmd.none )
 
+        AddTask task ->
+            ( { model | tasks = task :: model.tasks }, Cmd.none )
+
 
 
 ---- VIEW ----
+
+
+taskList : List Household.Task -> Element Msg
+taskList tasks =
+    let
+        viewTask { title, description } =
+            row [ width fill, height fill ]
+                [ image [] { description = "", src = "" }
+                , column []
+                    [ row [] [ text title, text description ]
+                    ]
+                ]
+    in
+    tasks
+        |> List.map viewTask
+        |> column []
 
 
 layoutSelector : LayoutMode -> Element Msg
