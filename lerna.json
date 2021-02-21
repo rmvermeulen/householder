@@ -1,4 +1,4 @@
 {
-  "packages": ["projects/*"],
+  "packages": ["client", "server"],
   "version": "0.0.0"
 }
