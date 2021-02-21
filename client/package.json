@@ -1,5 +1,5 @@
 {
-  "name": "elm-householder",
+  "name": "client",
   "version": "1.0.0",
   "description": "A tool for household members to manage common household tasks.",
   "main": "index.js",
