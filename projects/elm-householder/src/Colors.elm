@@ -25,3 +25,7 @@ green =
 
 blue =
     rgb 0 0 1
+
+
+purple =
+    rgb 1 0 1

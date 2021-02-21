@@ -8,6 +8,7 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Household
+import Table exposing (..)
 import Theme
 
 
@@ -35,7 +36,7 @@ layoutName layout =
 
 type alias Model =
     { layoutMode : LayoutMode
-    , tasks : List Household.Task
+    , tasks : Table Household.Task
     }
 
 
@@ -43,22 +44,23 @@ init : ( Model, Cmd Msg )
 init =
     ( { layoutMode = Centered
       , tasks =
-            [ Household.createTask
-                "Some task"
-                "This is just for testing. Don't worry about it."
-            , Household.createTask
-                "Another task"
-                "This is just for testing. Don't worry about it."
-            , Household.createTask
-                "Another task"
-                "This is just for testing. Don't worry about it."
-            , Household.createTask
-                "Another task"
-                "This is just for testing. Don't worry about it."
-            , Household.createTask
-                "Another task"
-                "This is just for testing. Don't worry about it."
-            ]
+            Table.fromList
+                [ Household.createTask
+                    "Some task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Another task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Another task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Another task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Another task"
+                    "This is just for testing. Don't worry about it."
+                ]
       }
     , Cmd.none
     )
@@ -68,27 +70,63 @@ init =
 ---- UPDATE ----
 
 
+type alias TaskId =
+    Table.Id Household.Task
+
+
 type Msg
     = SetLayoutMode LayoutMode
     | AddTask Household.Task
+    | TaskSetTitle TaskId String
+    | TaskSetDescription TaskId String
+    | TaskSetStatus TaskId Household.Status
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        simply m =
+            ( m, Cmd.none )
+    in
     case msg of
         SetLayoutMode mode ->
-            ( { model | layoutMode = mode }, Cmd.none )
+            simply { model | layoutMode = mode }
 
         AddTask task ->
-            ( { model | tasks = task :: model.tasks }, Cmd.none )
+            simply { model | tasks = Table.add task model.tasks |> Tuple.second }
+
+        TaskSetTitle id title ->
+            let
+                tasks =
+                    Table.mapSingle id (\task -> { task | title = title }) model.tasks
+            in
+            simply { model | tasks = tasks }
+
+        TaskSetDescription id description ->
+            let
+                tasks =
+                    Table.mapSingle id (\task -> { task | description = description }) model.tasks
+            in
+            simply { model | tasks = tasks }
+
+        TaskSetStatus id status ->
+            let
+                tasks =
+                    Table.mapSingle id (\task -> { task | status = status }) model.tasks
+            in
+            simply { model | tasks = tasks }
 
 
 
 ---- VIEW ----
 
 
-viewTask : Household.Task -> Element Msg
-viewTask { title, description } =
+viewTask : ( TaskId, Household.Task ) -> Element Msg
+viewTask ( id, task ) =
+    let
+        { title, description, status } =
+            task
+    in
     column
         [ width fill
         , height fill
@@ -109,6 +147,38 @@ viewTask { title, description } =
                 text "IMAGE"
             ]
         , paragraph [ width fill ] [ text description ]
+        , row [ spacing 10, padding 10 ]
+            [ Input.button [ padding 4, Border.width 1 ]
+                { label = text "clear title"
+                , onPress = Just <| TaskSetTitle id ""
+                }
+            , Input.button [ padding 4, Border.width 1 ]
+                { label = text "clear description"
+                , onPress = Just <| TaskSetDescription id ""
+                }
+            ]
+        , let
+            ( color, string ) =
+                case status of
+                    Household.Todo ->
+                        ( Background.color Colors.blue, "Todo" )
+
+                    Household.Done ->
+                        ( Background.color Colors.green, "Done" )
+
+                    Household.Disabled ->
+                        ( Background.color <| Colors.gray 0.7, "Disabled" )
+
+                    Household.Planned ->
+                        ( Background.color Colors.purple, "Planned" )
+          in
+          Input.button [ color, padding 10, Border.rounded 5 ]
+            { label = text string
+            , onPress =
+                Just <|
+                    TaskSetStatus id <|
+                        Household.nextStatus status
+            }
         ]
 
 
@@ -175,13 +245,19 @@ appMain { layoutMode, tasks } =
         Wide ->
             column attrs
                 [ text "main (wide)"
-                , tasks |> List.map viewTask |> row []
+                , tasks
+                    |> Table.pairs
+                    |> List.map viewTask
+                    |> row []
                 ]
 
         _ ->
             column attrs
                 [ text "main (mobile/centered)"
-                , tasks |> List.map viewTask |> column []
+                , tasks
+                    |> Table.pairs
+                    |> List.map viewTask
+                    |> column []
                 ]
 
 

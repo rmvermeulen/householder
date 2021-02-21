@@ -10,18 +10,32 @@ type User
 type Status
     = Todo
     | Done
-    | Planned
     | Disabled
+    | Planned
+
+
+nextStatus status =
+    case status of
+        Todo ->
+            Done
+
+        Done ->
+            Disabled
+
+        Disabled ->
+            Planned
+
+        Planned ->
+            Todo
 
 
 type alias Task =
-    { id : Int
-    , status : Status
+    { status : Status
     , title : String
     , description : String
+    , deadline : Maybe Time.Posix
     }
 
 
-createTask : String -> String -> Task
 createTask title description =
-    Task 0 Todo title description
+    Task Todo title description Nothing
