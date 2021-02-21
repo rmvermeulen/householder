@@ -1,20 +1,31 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, text, div, h1, img)
-import Html.Attributes exposing (src)
+import Element exposing (..)
+import Element.Background as Background
+import Element.Border as Border
+import Element.Font as Font
+import Theme
+
 
 
 ---- MODEL ----
 
 
+type LayoutMode
+    = Mobile
+    | Wide
+    | Compact
+
+
 type alias Model =
-    {}
+    { layoutMode : LayoutMode
+    }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( {}, Cmd.none )
+    ( Model Compact, Cmd.none )
 
 
 
@@ -22,23 +33,53 @@ init =
 
 
 type Msg
-    = NoOp
+    = SetLayoutMode LayoutMode
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        SetLayoutMode mode ->
+            ( { model | layoutMode = mode }, Cmd.none )
 
 
 
 ---- VIEW ----
 
 
-view : Model -> Html Msg
+header {} =
+    row
+        [ width fill
+        , height <| px 80
+        , Background.color Theme.header
+        , padding 8
+        ]
+        [ text "header"
+        ]
+
+
+footer {} =
+    row [] [ text "footer" ]
+
+
+appMain { layoutMode } =
+    case layoutMode of
+        Mobile ->
+            column [ padding 16 ] [ text "main (mobile)" ]
+
+        Wide ->
+            column [ padding 16 ] [ text "main (wide)" ]
+
+        Compact ->
+            column [ padding 16 ] [ text "main (compact)" ]
+
+
+view : Model -> Element Msg
 view model =
-    div []
-        [ img [ src "/logo.svg" ] []
-        , h1 [] [ text "Your Elm App is working!" ]
+    column [ width fill ]
+        [ header model
+        , appMain model
+        , footer model
         ]
 
 
@@ -49,7 +90,13 @@ view model =
 main : Program () Model Msg
 main =
     Browser.element
-        { view = view
+        { view =
+            view
+                >> layout
+                    [ width fill
+                    , height fill
+                    , Background.color Theme.background
+                    ]
         , init = \_ -> init
         , update = update
         , subscriptions = always Sub.none
