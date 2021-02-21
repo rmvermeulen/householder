@@ -1,10 +1,12 @@
 module Main exposing (..)
 
 import Browser
+import Colors
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import Element.Input as Input
 import Theme
 
 
@@ -15,7 +17,19 @@ import Theme
 type LayoutMode
     = Mobile
     | Wide
-    | Compact
+    | Centered
+
+
+layoutName layout =
+    case layout of
+        Mobile ->
+            "Mobile"
+
+        Wide ->
+            "Wide"
+
+        Centered ->
+            "Centered"
 
 
 type alias Model =
@@ -25,7 +39,7 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model Compact, Cmd.none )
+    ( Model Centered, Cmd.none )
 
 
 
@@ -47,40 +61,110 @@ update msg model =
 ---- VIEW ----
 
 
-header {} =
+layoutSelector : LayoutMode -> Element Msg
+layoutSelector layoutMode =
+    let
+        layoutButton layout =
+            if layoutMode == layout then
+                none
+
+            else
+                Input.button
+                    [ padding 4
+                    , Background.color Theme.button
+                    , width <| px 120
+                    ]
+                    { label = text <| layoutName layout
+                    , onPress = Just <| SetLayoutMode layout
+                    }
+    in
+    row []
+        [ text "Layout:"
+        , layoutButton Mobile
+        , layoutButton Wide
+        , layoutButton Centered
+        ]
+
+
+header : Model -> Element Msg
+header { layoutMode } =
     row
         [ width fill
-        , height <| px 80
+        , height (fill |> minimum 40)
         , Background.color Theme.header
         , padding 8
         ]
         [ text "header"
+        , layoutSelector layoutMode
         ]
 
 
+footer : Model -> Element Msg
 footer {} =
-    row [] [ text "footer" ]
+    row
+        [ width fill
+        , height (fill |> minimum 40)
+        , Background.color Theme.header
+        , padding 8
+        ]
+        [ text "footer" ]
 
 
+appMain : Model -> Element Msg
 appMain { layoutMode } =
+    let
+        attrs =
+            [ padding 16
+            , Background.color Colors.white
+            , width fill
+            , height fill
+            ]
+    in
     case layoutMode of
-        Mobile ->
-            column [ padding 16 ] [ text "main (mobile)" ]
-
         Wide ->
-            column [ padding 16 ] [ text "main (wide)" ]
+            column attrs
+                [ text "main (wide)"
+                , row [] []
+                ]
 
-        Compact ->
-            column [ padding 16 ] [ text "main (compact)" ]
+        _ ->
+            column attrs [ text "main (mobile/centered)" ]
 
 
 view : Model -> Element Msg
 view model =
-    column [ width fill ]
-        [ header model
-        , appMain model
-        , footer model
-        ]
+    let
+        app =
+            column [ width fill, height fill, Background.color Colors.blue ]
+                [ el [ width fill, height fill ] <| header model
+                , el [ width fill, height <| minimum 200 <| fillPortion 6 ] <| appMain model
+                , el [ width fill, height fill ] <| footer model
+                ]
+    in
+    case model.layoutMode of
+        Centered ->
+            row [ width fill, height fill ]
+                [ el
+                    [ width fill
+                    , height fill
+                    , Background.color Colors.red
+                    ]
+                    none
+                , el
+                    [ width <| minimum 400 <| fillPortion 2
+                    , height fill
+                    ]
+                    app
+                , el
+                    [ width fill
+                    , height fill
+                    , Background.color Colors.green
+                    ]
+                    none
+                ]
+
+        _ ->
+            app
 
 
 

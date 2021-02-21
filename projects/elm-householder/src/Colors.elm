@@ -8,8 +8,20 @@ gray f =
 
 
 white =
-    gray 0
+    gray 1
 
 
 black =
-    gray 1
+    gray 0
+
+
+red =
+    rgb 1 0 0
+
+
+green =
+    rgb 0 1 0
+
+
+blue =
+    rgb 0 0 1
