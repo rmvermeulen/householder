@@ -43,11 +43,19 @@ init : ( Model, Cmd Msg )
 init =
     ( { layoutMode = Centered
       , tasks =
-            [ Household.Task 0
+            [ Household.createTask
                 "Some task"
                 "This is just for testing. Don't worry about it."
-            , Household.Task
-                1
+            , Household.createTask
+                "Another task"
+                "This is just for testing. Don't worry about it."
+            , Household.createTask
+                "Another task"
+                "This is just for testing. Don't worry about it."
+            , Household.createTask
+                "Another task"
+                "This is just for testing. Don't worry about it."
+            , Household.createTask
                 "Another task"
                 "This is just for testing. Don't worry about it."
             ]
@@ -79,20 +87,29 @@ update msg model =
 ---- VIEW ----
 
 
-taskList : List Household.Task -> Element Msg
-taskList tasks =
-    let
-        viewTask { title, description } =
-            row [ width fill, height fill ]
-                [ image [] { description = "", src = "" }
-                , column []
-                    [ row [] [ text title, text description ]
-                    ]
+viewTask : Household.Task -> Element Msg
+viewTask { title, description } =
+    column
+        [ width fill
+        , height fill
+        , padding 20
+        , Background.color (rgb 0.8 0.8 1)
+        , Border.rounded 8
+        ]
+        [ row [ width fill, height fill ]
+            [ el [ width fill ] <| text title
+            , el
+                [ width <| px 80
+                , height <| px 80
+                , padding 10
+                , Font.center
+                , Background.color Colors.white
                 ]
-    in
-    tasks
-        |> List.map viewTask
-        |> column []
+              <|
+                text "IMAGE"
+            ]
+        , paragraph [ width fill ] [ text description ]
+        ]
 
 
 layoutSelector : LayoutMode -> Element Msg
@@ -145,7 +162,7 @@ footer {} =
 
 
 appMain : Model -> Element Msg
-appMain { layoutMode } =
+appMain { layoutMode, tasks } =
     let
         attrs =
             [ padding 16
@@ -158,11 +175,14 @@ appMain { layoutMode } =
         Wide ->
             column attrs
                 [ text "main (wide)"
-                , row [] []
+                , tasks |> List.map viewTask |> row []
                 ]
 
         _ ->
-            column attrs [ text "main (mobile/centered)" ]
+            column attrs
+                [ text "main (mobile/centered)"
+                , tasks |> List.map viewTask |> column []
+                ]
 
 
 view : Model -> Element Msg
