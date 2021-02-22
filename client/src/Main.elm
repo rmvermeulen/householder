@@ -8,6 +8,7 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Household
+import Http
 import Table exposing (..)
 import Theme
 
@@ -62,7 +63,7 @@ init =
                     "This is just for testing. Don't worry about it."
                 ]
       }
-    , Cmd.none
+    , Cmd.batch [ Http.get { url = "http://localhost:4000", expect = Http.expectString ServerMessage } ]
     )
 
 
@@ -80,6 +81,7 @@ type Msg
     | TaskSetTitle TaskId String
     | TaskSetDescription TaskId String
     | TaskSetStatus TaskId Household.Status
+    | ServerMessage (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -115,6 +117,21 @@ update msg model =
                     Table.mapSingle id (\task -> { task | status = status }) model.tasks
             in
             simply { model | tasks = tasks }
+
+        ServerMessage result ->
+            let
+                _ =
+                    case result of
+                        Ok string ->
+                            Debug.log "Received" string
+
+                        Err e ->
+                            Debug.log "Error" (Debug.toString e)
+
+                _ =
+                    Debug.log "ServerMessage handled!"
+            in
+            simply model
 
 
 
