@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Colors
+import Debug
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -9,6 +10,9 @@ import Element.Font as Font
 import Element.Input as Input
 import Household
 import Http
+import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Pipeline exposing (hardcoded, optional, required)
+import Json.Encode as Encode
 import Table exposing (..)
 import Theme
 
@@ -38,6 +42,7 @@ layoutName layout =
 type alias Model =
     { layoutMode : LayoutMode
     , tasks : Table Household.Task
+    , mText : Maybe String
     }
 
 
@@ -62,6 +67,7 @@ init =
                     "Another task"
                     "This is just for testing. Don't worry about it."
                 ]
+      , mText = Nothing
       }
     , Cmd.batch [ Http.get { url = "http://localhost:4000", expect = Http.expectString ServerMessage } ]
     )
@@ -120,18 +126,57 @@ update msg model =
 
         ServerMessage result ->
             let
-                _ =
+                string =
                     case result of
-                        Ok string ->
-                            Debug.log "Received" string
+                        Ok s ->
+                            Debug.log "Received" s
 
                         Err e ->
                             Debug.log "Error" (Debug.toString e)
 
+                itemDecoder : Decoder MyObject
+                itemDecoder =
+                    Decode.succeed MyObject
+                        |> required "data" Decode.bool
+                        |> required "value" Decode.int
+                        |> required "fields" (Decode.list Decode.string)
+
+                listDecoder =
+                    Decode.list itemDecoder
+
+                values : List MyObject
+                values =
+                    case Decode.decodeString listDecoder string of
+                        Ok v ->
+                            v
+
+                        Err e ->
+                            []
+
                 _ =
-                    Debug.log "ServerMessage handled!"
+                    values |> Debug.toString |> Debug.log
+
+                pretty =
+                    let
+                        enc o =
+                            Encode.object
+                                [ ( "data", Encode.bool o.data )
+                                , ( "value", Encode.int o.value )
+                                , ( "fields", Encode.list Encode.string o.fields )
+                                ]
+                    in
+                    values
+                        |> Encode.list enc
+                        |> Encode.encode 2
             in
-            simply model
+            simply { model | mText = Just pretty }
+
+
+type alias MyObject =
+    { data : Bool
+    , value : Int
+    , fields : List String
+    }
 
 
 
@@ -249,7 +294,7 @@ footer {} =
 
 
 appMain : Model -> Element Msg
-appMain { layoutMode, tasks } =
+appMain { layoutMode, tasks, mText } =
     let
         attrs =
             [ padding 16
@@ -271,6 +316,9 @@ appMain { layoutMode, tasks } =
         _ ->
             column attrs
                 [ text "main (mobile/centered)"
+                , mText
+                    |> Maybe.map text
+                    |> Maybe.withDefault none
                 , tasks
                     |> Table.pairs
                     |> List.map viewTask
