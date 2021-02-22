@@ -7,7 +7,9 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "elm-app test"
+    "test": "elm-app test",
+    "build": "elm-app build",
+    "start:dev": "elm-app start"
   },
   "author": "Rasmus Vermeulen"
 }
