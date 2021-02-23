@@ -14,6 +14,7 @@ type Status
     | Planned
 
 
+nextStatus : Status -> Status
 nextStatus status =
     case status of
         Todo ->
@@ -37,5 +38,6 @@ type alias Task =
     }
 
 
+createTask : String -> String -> Task
 createTask title description =
     Task Todo title description Nothing
