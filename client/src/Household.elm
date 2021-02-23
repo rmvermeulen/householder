@@ -3,10 +3,6 @@ module Household exposing (..)
 import Time
 
 
-type User
-    = User
-
-
 type Status
     = Todo
     | Done

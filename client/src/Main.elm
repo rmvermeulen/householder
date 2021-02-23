@@ -11,10 +11,11 @@ import Element.Input as Input
 import Household
 import Http
 import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline exposing (hardcoded, optional, required)
+import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode
 import Table exposing (..)
 import Theme
+import User exposing (User)
 
 
 
@@ -43,6 +44,7 @@ type alias Model =
     { layoutMode : LayoutMode
     , tasks : Table Household.Task
     , mText : Maybe String
+    , users : List User
     }
 
 
@@ -68,8 +70,17 @@ init =
                     "This is just for testing. Don't worry about it."
                 ]
       , mText = Nothing
+      , users =
+            [ User 0 "Bob" "Alderson" True
+            , User 1 "Karen" "Flim" True
+            ]
       }
-    , Cmd.batch [ Http.get { url = "http://localhost:4000", expect = Http.expectString ServerMessage } ]
+    , Cmd.batch
+        [ Http.get
+            { url = "http://localhost:4000"
+            , expect = Http.expectJson ReceiveUsers (Decode.list User.decodeUser)
+            }
+        ]
     )
 
 
@@ -87,7 +98,8 @@ type Msg
     | TaskSetTitle TaskId String
     | TaskSetDescription TaskId String
     | TaskSetStatus TaskId Household.Status
-    | ServerMessage (Result Http.Error String)
+    | ReceiveUsers (Result Http.Error (List User))
+    | SetUsers (List User)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -124,59 +136,14 @@ update msg model =
             in
             simply { model | tasks = tasks }
 
-        ServerMessage result ->
-            let
-                string =
-                    case result of
-                        Ok s ->
-                            Debug.log "Received" s
+        ReceiveUsers (Ok users) ->
+            update (SetUsers users) model
 
-                        Err e ->
-                            Debug.log "Error" (Debug.toString e)
+        ReceiveUsers (Err error) ->
+            simply { model | mText = Just <| Debug.toString error }
 
-                itemDecoder : Decoder MyObject
-                itemDecoder =
-                    Decode.succeed MyObject
-                        |> required "data" Decode.bool
-                        |> required "value" Decode.int
-                        |> required "fields" (Decode.list Decode.string)
-
-                listDecoder =
-                    Decode.list itemDecoder
-
-                values : List MyObject
-                values =
-                    case Decode.decodeString listDecoder string of
-                        Ok v ->
-                            v
-
-                        Err e ->
-                            []
-
-                _ =
-                    values |> Debug.toString |> Debug.log
-
-                pretty =
-                    let
-                        enc o =
-                            Encode.object
-                                [ ( "data", Encode.bool o.data )
-                                , ( "value", Encode.int o.value )
-                                , ( "fields", Encode.list Encode.string o.fields )
-                                ]
-                    in
-                    values
-                        |> Encode.list enc
-                        |> Encode.encode 2
-            in
-            simply { model | mText = Just pretty }
-
-
-type alias MyObject =
-    { data : Bool
-    , value : Int
-    , fields : List String
-    }
+        SetUsers users ->
+            simply { model | users = users }
 
 
 
@@ -344,7 +311,15 @@ view model =
                     , height fill
                     , Background.color Colors.red
                     ]
-                    none
+                  -- none
+                  <|
+                    column []
+                        (List.map
+                            (\{ id, firstName, lastName, isActive } ->
+                                text <| String.fromInt id ++ ": " ++ firstName ++ " " ++ lastName
+                            )
+                            model.users
+                        )
                 , el
                     [ width <| minimum 400 <| fillPortion 2
                     , height fill
