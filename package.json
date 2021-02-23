@@ -2,9 +2,11 @@
   "name": "root",
   "private": true,
   "devDependencies": {
+    "husky": "^5.1.1",
     "lerna": "^3.22.1"
   },
   "scripts": {
-    "dev": "lerna run start:dev --parallel"
+    "dev": "lerna run start:dev --parallel",
+    "postinstall": "husky install"
   }
 }
