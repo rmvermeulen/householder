@@ -1,4 +1,4 @@
 module.exports = {
-  "client/*": "lerna run test --scope client",
-  "server/*": "lerna run test --scope server",
+  "client/**/*": "lerna --scope client run test",
+  "server/**/*": "lerna --scope server run test",
 };

@@ -3,7 +3,8 @@
   "private": true,
   "devDependencies": {
     "husky": "^5.1.1",
-    "lerna": "^3.22.1"
+    "lerna": "^3.22.1",
+    "lint-staged": "^10.5.4"
   },
   "scripts": {
     "dev": "lerna run start:dev --parallel",
