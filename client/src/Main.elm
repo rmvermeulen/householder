@@ -9,6 +9,8 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Framework.Button as Button
+import Framework.Modifier exposing (Modifier(..))
 import Household
 import Http
 import Json.Decode as Decode exposing (Decoder)
@@ -283,6 +285,13 @@ viewTask ( id, ( task, state ) ) =
         , Dropdown.view (dropdownConfig id)
             state
             taskOptionsList
+        , Button.button
+            [ Medium
+            , Success
+            , Outlined
+            ]
+            Nothing
+            "Button"
         ]
 
 
