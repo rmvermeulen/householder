@@ -60,28 +60,8 @@ pathPage path =
             Nothing
 
 
-type LayoutMode
-    = Mobile
-    | Wide
-    | Centered
-
-
-layoutName : LayoutMode -> String
-layoutName layout =
-    case layout of
-        Mobile ->
-            "Mobile"
-
-        Wide ->
-            "Wide"
-
-        Centered ->
-            "Centered"
-
-
 type alias Model =
-    { layoutMode : LayoutMode
-    , tasks : Table Household.Task
+    { tasks : Table Household.Task
     , mText : Maybe String
     , users : List User
     , page : Page
@@ -101,8 +81,7 @@ type alias Flags =
 
 init : Flags -> ( Model, Cmd Msg )
 init { path, size } =
-    ( { layoutMode = Centered
-      , tasks =
+    ( { tasks =
             Table.fromList
                 [ Household.createTask
                     "Some task"
@@ -146,8 +125,7 @@ type alias TaskId =
 
 
 type Msg
-    = SetLayoutMode LayoutMode
-    | AddTask Household.Task
+    = AddTask Household.Task
     | TaskSetTitle TaskId String
     | TaskSetDescription TaskId String
     | TaskSetStatus TaskId Household.Status
@@ -164,9 +142,6 @@ update msg model =
             ( m, Cmd.none )
     in
     case msg of
-        SetLayoutMode mode ->
-            simply { model | layoutMode = mode }
-
         AddTask task ->
             simply { model | tasks = Table.add task model.tasks |> Tuple.second }
 
@@ -272,33 +247,8 @@ viewTask ( id, task ) =
         ]
 
 
-layoutSelector : LayoutMode -> Element Msg
-layoutSelector layoutMode =
-    let
-        layoutButton layout =
-            if layoutMode == layout then
-                none
-
-            else
-                Input.button
-                    [ padding 4
-                    , Background.color Theme.button
-                    , width <| px 120
-                    ]
-                    { label = text <| layoutName layout
-                    , onPress = Just <| SetLayoutMode layout
-                    }
-    in
-    row []
-        [ text "Layout:"
-        , layoutButton Mobile
-        , layoutButton Wide
-        , layoutButton Centered
-        ]
-
-
 header : Model -> Element Msg
-header { page, layoutMode, size } =
+header { page, size } =
     column
         [ width fill
         , height (fill |> minimum 40)
@@ -308,25 +258,27 @@ header { page, layoutMode, size } =
         [ text <| pagePath page
         , row [ width fill, height fill ]
             [ text "header"
-            , layoutSelector layoutMode
             , text <| Debug.toString size
             ]
         ]
 
 
 footer : Model -> Element Msg
-footer {} =
+footer { mText } =
     row
         [ width fill
         , height (fill |> minimum 40)
         , Background.color Theme.header
         , padding 8
         ]
-        [ text "footer" ]
+        [ mText
+            |> Maybe.map text
+            |> Maybe.withDefault none
+        ]
 
 
 appMain : Model -> Element Msg
-appMain { layoutMode, tasks, mText } =
+appMain { tasks, size } =
     let
         attrs =
             [ padding 16
@@ -334,58 +286,39 @@ appMain { layoutMode, tasks, mText } =
             , width fill
             , height fill
             ]
-    in
-    case layoutMode of
-        Wide ->
-            column attrs
-                [ text "main (wide)"
-                , tasks
-                    |> Table.pairs
-                    |> List.map viewTask
-                    |> row []
-                ]
 
-        _ ->
-            column attrs
-                [ text "main (mobile/centered)"
-                , mText
-                    |> Maybe.map text
-                    |> Maybe.withDefault none
-                , tasks
-                    |> Table.pairs
-                    |> List.map viewTask
-                    |> column []
-                ]
+        sidebar c =
+            el [ width fill, height fill, Background.color c ] none
+    in
+    row attrs
+        [ sidebar Colors.red
+        , column
+            [ width <|
+                minimum (min size.x 800) <|
+                    maximum 1200 <|
+                        fillPortion 8
+            ]
+            [ tasks
+                |> Table.pairs
+                |> List.map viewTask
+                |> column [ width fill ]
+            ]
+        , sidebar Colors.green
+        ]
 
 
 view : Model -> Element Msg
 view model =
-    let
-        app =
-            column [ width fill, height fill, Background.color Colors.blue ]
-                [ el [ width fill, height fill ] <| header model
-                , el [ width fill, height <| minimum 200 <| fillPortion 6 ] <| appMain model
-                , el [ width fill, height fill ] <| footer model
-                ]
-    in
-    case model.layoutMode of
-        Centered ->
-            let
-                sidebar c =
-                    el [ width fill, height fill, Background.color c ] none
-            in
-            row [ width fill, height fill ]
-                [ sidebar Colors.red
-                , el
-                    [ width <| minimum 400 <| fillPortion 2
-                    , height fill
-                    ]
-                    app
-                , sidebar Colors.green
-                ]
-
-        _ ->
-            app
+    column [ width fill, height fill, Background.color Colors.blue ]
+        [ el [ width fill, height fill ] <| header model
+        , el
+            [ width fill
+            , height <| minimum 200 <| fillPortion 6
+            ]
+          <|
+            appMain model
+        , el [ width fill, height fill ] <| footer model
+        ]
 
 
 
