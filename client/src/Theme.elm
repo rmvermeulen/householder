@@ -1,19 +1,19 @@
 module Theme exposing (..)
 
-import Colors
 import Element exposing (rgb)
+import Framework.Color as Color
 
 
 background : Element.Color
 background =
-    Colors.gray 0.7
+    Color.grey_dark
 
 
 header : Element.Color
 header =
-    Colors.gray 0.6
+    Color.grey_darker
 
 
 button : Element.Color
 button =
-    rgb 0.5 0.5 1
+    Color.blue

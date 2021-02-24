@@ -1,7 +1,6 @@
 port module Main exposing (..)
 
 import Browser
-import Colors
 import Debug
 import Dropdown
 import Element exposing (..)
@@ -10,6 +9,8 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Framework.Button as Button
+import Framework.Card as Card
+import Framework.Color as Color
 import Framework.Modifier exposing (Modifier(..))
 import Household
 import Http
@@ -19,6 +20,7 @@ import Json.Encode as Encode
 import Table exposing (..)
 import Theme
 import User exposing (User)
+import Widget
 
 
 port windowSize : (Size Int -> msg) -> Sub msg
@@ -230,69 +232,66 @@ viewTask ( id, ( task, state ) ) =
         { title, description, status } =
             task
     in
-    column
-        [ width fill
-        , height fill
-        , padding 20
-        , Background.color (rgb 0.8 0.8 1)
-        , Border.rounded 8
-        ]
-        [ row [ width fill, height fill ]
-            [ el [ width fill ] <| text title
-            , el
-                [ width <| px 80
-                , height <| px 80
-                , padding 10
-                , Font.center
-                , Background.color Colors.white
+    Card.simpleWithTitle "Task" title <|
+        column
+            [ width fill
+            , height fill
+            ]
+            [ row [ width fill, height fill ]
+                [ paragraph [ width fill ] [ text description ]
+                , el
+                    [ width <| px 80
+                    , height <| px 80
+                    , padding 10
+                    , Font.center
+                    , Background.color Color.green
+                    ]
+                  <|
+                    text "IMAGE"
                 ]
-              <|
-                text "IMAGE"
-            ]
-        , paragraph [ width fill ] [ text description ]
-        , row [ spacing 10, padding 10 ]
-            [ Input.button [ padding 4, Border.width 1 ]
-                { label = text "clear title"
-                , onPress = Just <| TaskSetTitle id ""
+            , row [ spacing 10, padding 10 ]
+                [ Input.button [ padding 4, Border.width 1 ]
+                    { label = text "clear title"
+                    , onPress = Just <| TaskSetTitle id ""
+                    }
+                , Input.button [ padding 4, Border.width 1 ]
+                    { label = text "clear description"
+                    , onPress = Just <| TaskSetDescription id ""
+                    }
+                ]
+            , let
+                ( color, string ) =
+                    case status of
+                        Household.Todo ->
+                            ( Background.color Color.blue, "Todo" )
+
+                        Household.Done ->
+                            ( Background.color Color.green, "Done" )
+
+                        Household.Disabled ->
+                            ( Background.color <| Color.red, "Disabled" )
+
+                        Household.Planned ->
+                            ( Background.color Color.purple, "Planned" )
+              in
+              Input.button [ color, padding 10, Border.rounded 5 ]
+                { label = text string
+                , onPress =
+                    Just <|
+                        TaskSetStatus id <|
+                            Household.nextStatus status
                 }
-            , Input.button [ padding 4, Border.width 1 ]
-                { label = text "clear description"
-                , onPress = Just <| TaskSetDescription id ""
-                }
+            , Dropdown.view (dropdownConfig id)
+                state
+                taskOptionsList
+            , Button.button
+                [ Medium
+                , Success
+                , Outlined
+                ]
+                Nothing
+                "Button"
             ]
-        , let
-            ( color, string ) =
-                case status of
-                    Household.Todo ->
-                        ( Background.color Colors.blue, "Todo" )
-
-                    Household.Done ->
-                        ( Background.color Colors.green, "Done" )
-
-                    Household.Disabled ->
-                        ( Background.color <| Colors.gray 0.7, "Disabled" )
-
-                    Household.Planned ->
-                        ( Background.color Colors.purple, "Planned" )
-          in
-          Input.button [ color, padding 10, Border.rounded 5 ]
-            { label = text string
-            , onPress =
-                Just <|
-                    TaskSetStatus id <|
-                        Household.nextStatus status
-            }
-        , Dropdown.view (dropdownConfig id)
-            state
-            taskOptionsList
-        , Button.button
-            [ Medium
-            , Success
-            , Outlined
-            ]
-            Nothing
-            "Button"
-        ]
 
 
 header : Model -> Element Msg
@@ -330,7 +329,7 @@ appMain { tasks, size } =
     let
         attrs =
             [ padding 16
-            , Background.color Colors.white
+            , Background.color Color.white
             , width fill
             , height fill
             ]
@@ -354,7 +353,7 @@ appMain { tasks, size } =
 
 view : Model -> Element Msg
 view model =
-    column [ width fill, height fill, Background.color Colors.blue ]
+    column [ width fill, height fill, Background.color Color.blue ]
         [ el [ width fill, height fill ] <| header model
         , el
             [ width fill
