@@ -24,7 +24,7 @@ describe('AppController (e2e)', () => {
       .expect('Hello World!');
   });
 
-  it('/user (GET)', () => {
+  it('/users (GET)', () => {
     const userMatcher = expect.objectContaining({
       id: expect.any(Number),
       firstName: expect.any(String),
@@ -32,7 +32,7 @@ describe('AppController (e2e)', () => {
       isActive: expect.any(Boolean),
     });
     return request(app.getHttpServer())
-      .get('/user')
+      .get('/users')
       .expect(200)
       .expect(({ body }) => {
         expect(body).toBeInstanceOf(Array);
