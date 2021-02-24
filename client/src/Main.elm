@@ -251,7 +251,7 @@ header : Model -> Element Msg
 header { page, size } =
     column
         [ width fill
-        , height (fill |> minimum 40)
+        , fill |> minimum 40 |> height
         , Background.color Theme.header
         , padding 8
         ]
@@ -267,7 +267,7 @@ footer : Model -> Element Msg
 footer { mText } =
     row
         [ width fill
-        , height (fill |> minimum 40)
+        , fill |> minimum 40 |> height
         , Background.color Theme.header
         , padding 8
         ]
@@ -286,24 +286,21 @@ appMain { tasks, size } =
             , width fill
             , height fill
             ]
-
-        sidebar c =
-            el [ width fill, height fill, Background.color c ] none
     in
     row attrs
-        [ sidebar Colors.red
-        , column
-            [ width <|
-                minimum (min size.x 800) <|
-                    maximum 1200 <|
-                        fillPortion 8
+        [ column
+            [ fillPortion 8
+                |> minimum (min size.x 800)
+                |> maximum 1200
+                |> width
             ]
             [ tasks
                 |> Table.pairs
                 |> List.map viewTask
                 |> column [ width fill ]
             ]
-        , sidebar Colors.green
+        , el [ width fill, height fill, Background.color Colors.green ]
+            none
         ]
 
 
@@ -313,7 +310,9 @@ view model =
         [ el [ width fill, height fill ] <| header model
         , el
             [ width fill
-            , height <| minimum 200 <| fillPortion 6
+            , fillPortion 6
+                |> minimum 200
+                |> height
             ]
           <|
             appMain model
