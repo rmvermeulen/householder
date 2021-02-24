@@ -69,6 +69,7 @@ type alias Model =
     { tasks : Table ( Household.Task, Dropdown.State Household.Status )
     , mText : Maybe String
     , users : List User
+    , mUser : Maybe User
     , page : Page
     , size : Size Int
     , dropdownState : Dropdown.State Household.Status
@@ -87,27 +88,34 @@ type alias Flags =
 
 init : Flags -> ( Model, Cmd Msg )
 init { path, size } =
-    ( { tasks =
-            [ Household.createTask
-                "Some task"
-                "This is just for testing. Don't worry about it."
-            , Household.createTask
-                "Another task"
-                "This is just for testing. Don't worry about it."
-            ]
-                |> List.map (\task -> ( task, Dropdown.init "status" ))
-                |> Table.fromList
-      , mText = Nothing
-      , users =
-            [ User 0 "Bob" "Alderson" True
-            , User 1 "Karen" "Flim" True
-            ]
-      , page = Maybe.withDefault Home (pathPage path)
-      , size = size
-      , dropdownState = Dropdown.init "status"
-      }
+    let
+        ( model, cmd ) =
+            { tasks =
+                [ Household.createTask
+                    "Some task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Another task"
+                    "This is just for testing. Don't worry about it."
+                ]
+                    |> List.map (\task -> ( task, Dropdown.init "status" ))
+                    |> Table.fromList
+            , mText = Nothing
+            , users =
+                [ User 0 "Bob" "Alderson" True
+                , User 1 "Karen" "Flim" True
+                ]
+            , mUser = Nothing
+            , page = Login
+            , size = size
+            , dropdownState = Dropdown.init "status"
+            }
+                |> update (SetPage <| Maybe.withDefault Home (pathPage path))
+    in
+    ( model
     , Cmd.batch
-        [ Http.get
+        [ cmd
+        , Http.get
             { url = "http://localhost:4000"
             , expect = Http.expectJson ReceiveUsers (Decode.list User.decodeUser)
             }
@@ -177,7 +185,12 @@ update msg model =
             simply { model | users = users }
 
         SetPage page ->
-            simply { model | page = page }
+            case model.mUser of
+                Just _ ->
+                    simply { model | page = page }
+
+                Nothing ->
+                    simply { model | page = Login }
 
         SetSize size ->
             simply { model | size = size }
@@ -250,11 +263,11 @@ viewTask ( id, ( task, state ) ) =
                     text "IMAGE"
                 ]
             , row [ spacing 10, padding 10 ]
-                [ Input.button [ padding 4, Border.width 1 ]
+                [ Input.button [ padding 4, Border.width 1, Font.color Color.red ]
                     { label = text "clear title"
                     , onPress = Just <| TaskSetTitle id ""
                     }
-                , Input.button [ padding 4, Border.width 1 ]
+                , Input.button [ padding 4, Border.width 1, Font.color Color.red ]
                     { label = text "clear description"
                     , onPress = Just <| TaskSetDescription id ""
                     }
@@ -325,7 +338,7 @@ footer { mText } =
 
 
 appMain : Model -> Element Msg
-appMain { tasks, size } =
+appMain { page, tasks, size } =
     let
         attrs =
             [ padding 16
@@ -334,21 +347,29 @@ appMain { tasks, size } =
             , height fill
             ]
     in
-    row attrs
-        [ column
-            [ fillPortion 8
-                |> minimum (min size.x 800)
-                |> maximum 1200
-                |> width
-            ]
-            [ tasks
-                |> Table.pairs
-                |> List.map viewTask
-                |> column [ width fill, padding 10, spacing 10 ]
-            ]
-        , el [ width fill, height fill ]
-            none
-        ]
+    case page of
+        Home ->
+            row attrs
+                [ column
+                    [ fillPortion 8
+                        |> minimum (min size.x 800)
+                        |> maximum 1200
+                        |> width
+                    ]
+                    [ tasks
+                        |> Table.pairs
+                        |> List.map viewTask
+                        |> column [ width fill, padding 10, spacing 10 ]
+                    ]
+                , el [ width fill, height fill ]
+                    none
+                ]
+
+        Login ->
+            text "login page (TODO)"
+
+        Users ->
+            text "users overview (TODO)"
 
 
 view : Model -> Element Msg
