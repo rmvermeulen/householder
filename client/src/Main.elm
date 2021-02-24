@@ -89,15 +89,6 @@ init { path, size } =
                 , Household.createTask
                     "Another task"
                     "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Another task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Another task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Another task"
-                    "This is just for testing. Don't worry about it."
                 ]
       , mText = Nothing
       , users =
@@ -297,9 +288,9 @@ appMain { tasks, size } =
             [ tasks
                 |> Table.pairs
                 |> List.map viewTask
-                |> column [ width fill ]
+                |> column [ width fill, padding 10, spacing 10 ]
             ]
-        , el [ width fill, height fill, Background.color Colors.green ]
+        , el [ width fill, height fill ]
             none
         ]
 
