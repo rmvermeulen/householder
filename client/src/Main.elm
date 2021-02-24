@@ -3,6 +3,7 @@ port module Main exposing (..)
 import Browser
 import Colors
 import Debug
+import Dropdown
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -61,11 +62,12 @@ pathPage path =
 
 
 type alias Model =
-    { tasks : Table Household.Task
+    { tasks : Table ( Household.Task, Dropdown.State Household.Status )
     , mText : Maybe String
     , users : List User
     , page : Page
     , size : Size Int
+    , dropdownState : Dropdown.State Household.Status
     }
 
 
@@ -82,14 +84,15 @@ type alias Flags =
 init : Flags -> ( Model, Cmd Msg )
 init { path, size } =
     ( { tasks =
-            Table.fromList
-                [ Household.createTask
-                    "Some task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Another task"
-                    "This is just for testing. Don't worry about it."
-                ]
+            [ Household.createTask
+                "Some task"
+                "This is just for testing. Don't worry about it."
+            , Household.createTask
+                "Another task"
+                "This is just for testing. Don't worry about it."
+            ]
+                |> List.map (\task -> ( task, Dropdown.init "status" ))
+                |> Table.fromList
       , mText = Nothing
       , users =
             [ User 0 "Bob" "Alderson" True
@@ -97,6 +100,7 @@ init { path, size } =
             ]
       , page = Maybe.withDefault Home (pathPage path)
       , size = size
+      , dropdownState = Dropdown.init "status"
       }
     , Cmd.batch
         [ Http.get
@@ -112,7 +116,7 @@ init { path, size } =
 
 
 type alias TaskId =
-    Table.Id Household.Task
+    Table.Id ( Household.Task, Dropdown.State Household.Status )
 
 
 type Msg
@@ -124,6 +128,8 @@ type Msg
     | SetUsers (List User)
     | SetPage Page
     | SetSize (Size Int)
+    | DropdownMsg TaskId (Dropdown.Msg Household.Status)
+    | DropdownPicked TaskId (Maybe Household.Status)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -134,26 +140,26 @@ update msg model =
     in
     case msg of
         AddTask task ->
-            simply { model | tasks = Table.add task model.tasks |> Tuple.second }
+            simply { model | tasks = Table.add ( task, Dropdown.init "status" ) model.tasks |> Tuple.second }
 
         TaskSetTitle id title ->
             let
                 tasks =
-                    Table.mapSingle id (\task -> { task | title = title }) model.tasks
+                    Table.mapSingle id (Tuple.mapFirst (\task -> { task | title = title })) model.tasks
             in
             simply { model | tasks = tasks }
 
         TaskSetDescription id description ->
             let
                 tasks =
-                    Table.mapSingle id (\task -> { task | description = description }) model.tasks
+                    Table.mapSingle id (Tuple.mapFirst (\task -> { task | description = description })) model.tasks
             in
             simply { model | tasks = tasks }
 
         TaskSetStatus id status ->
             let
                 tasks =
-                    Table.mapSingle id (\task -> { task | status = status }) model.tasks
+                    Table.mapSingle id (Tuple.mapFirst (\task -> { task | status = status })) model.tasks
             in
             simply { model | tasks = tasks }
 
@@ -172,13 +178,52 @@ update msg model =
         SetSize size ->
             simply { model | size = size }
 
+        DropdownMsg tid ddMsg ->
+            let
+                tasks =
+                    Table.mapSingle tid
+                        (Tuple.mapSecond
+                            (\state ->
+                                let
+                                    foo : ( Dropdown.State Household.Status, Cmd Msg )
+                                    foo =
+                                        Dropdown.update (dropdownConfig tid) ddMsg state taskOptionsList
+
+                                    ( s, c ) =
+                                        foo
+                                in
+                                s
+                            )
+                        )
+                        model.tasks
+            in
+            simply { model | tasks = tasks }
+
+        DropdownPicked tid mString ->
+            case mString of
+                Just string ->
+                    let
+                        tasks : Table ( Household.Task, Dropdown.State Household.Status )
+                        tasks =
+                            let
+                                updateTask : ( Household.Task, Dropdown.State Household.Status ) -> ( Household.Task, Dropdown.State Household.Status )
+                                updateTask =
+                                    Tuple.mapFirst (\task -> { task | status = string })
+                            in
+                            Table.mapSingle tid updateTask model.tasks
+                    in
+                    simply { model | tasks = tasks }
+
+                Nothing ->
+                    simply model
+
 
 
 ---- VIEW ----
 
 
-viewTask : ( TaskId, Household.Task ) -> Element Msg
-viewTask ( id, task ) =
+viewTask : ( TaskId, ( Household.Task, Dropdown.State Household.Status ) ) -> Element Msg
+viewTask ( id, ( task, state ) ) =
     let
         { title, description, status } =
             task
@@ -235,6 +280,9 @@ viewTask ( id, task ) =
                     TaskSetStatus id <|
                         Household.nextStatus status
             }
+        , Dropdown.view (dropdownConfig id)
+            state
+            taskOptionsList
         ]
 
 
@@ -333,3 +381,28 @@ main =
                     [ windowSize SetSize
                     ]
         }
+
+
+
+---- config
+
+
+dropdownConfig : TaskId -> Dropdown.Config Household.Status Msg
+dropdownConfig tid =
+    let
+        itemToPrompt item =
+            text <| Debug.toString item
+
+        itemToElement selected highlighted item =
+            text <| Debug.toString item
+    in
+    Dropdown.basic (DropdownMsg tid) (DropdownPicked tid) itemToPrompt itemToElement
+
+
+taskOptionsList : List Household.Status
+taskOptionsList =
+    [ Household.Todo
+    , Household.Done
+    , Household.Disabled
+    , Household.Planned
+    ]
