@@ -1,4 +1,4 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Browser
 import Colors
@@ -18,8 +18,46 @@ import Theme
 import User exposing (User)
 
 
+port windowSize : (Size Int -> msg) -> Sub msg
+
+
 
 ---- MODEL ----
+
+
+type Page
+    = Home
+    | Login
+    | Users
+
+
+pagePath : Page -> String
+pagePath page =
+    case page of
+        Home ->
+            "/"
+
+        Login ->
+            "/login"
+
+        Users ->
+            "/users"
+
+
+pathPage : String -> Maybe Page
+pathPage path =
+    case path of
+        "/" ->
+            Just Home
+
+        "/login" ->
+            Just Login
+
+        "/users" ->
+            Just Users
+
+        _ ->
+            Nothing
 
 
 type LayoutMode
@@ -28,6 +66,7 @@ type LayoutMode
     | Centered
 
 
+layoutName : LayoutMode -> String
 layoutName layout =
     case layout of
         Mobile ->
@@ -45,11 +84,23 @@ type alias Model =
     , tasks : Table Household.Task
     , mText : Maybe String
     , users : List User
+    , page : Page
+    , size : Size Int
     }
 
 
-init : ( Model, Cmd Msg )
-init =
+type alias Size t =
+    { x : t, y : t }
+
+
+type alias Flags =
+    { path : String
+    , size : Size Int
+    }
+
+
+init : Flags -> ( Model, Cmd Msg )
+init { path, size } =
     ( { layoutMode = Centered
       , tasks =
             Table.fromList
@@ -74,6 +125,8 @@ init =
             [ User 0 "Bob" "Alderson" True
             , User 1 "Karen" "Flim" True
             ]
+      , page = Maybe.withDefault Home (pathPage path)
+      , size = size
       }
     , Cmd.batch
         [ Http.get
@@ -100,6 +153,8 @@ type Msg
     | TaskSetStatus TaskId Household.Status
     | ReceiveUsers (Result Http.Error (List User))
     | SetUsers (List User)
+    | SetPage Page
+    | SetSize (Size Int)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -144,6 +199,12 @@ update msg model =
 
         SetUsers users ->
             simply { model | users = users }
+
+        SetPage page ->
+            simply { model | page = page }
+
+        SetSize size ->
+            simply { model | size = size }
 
 
 
@@ -237,15 +298,19 @@ layoutSelector layoutMode =
 
 
 header : Model -> Element Msg
-header { layoutMode } =
-    row
+header { page, layoutMode, size } =
+    column
         [ width fill
         , height (fill |> minimum 40)
         , Background.color Theme.header
         , padding 8
         ]
-        [ text "header"
-        , layoutSelector layoutMode
+        [ text <| pagePath page
+        , row [ width fill, height fill ]
+            [ text "header"
+            , layoutSelector layoutMode
+            , text <| Debug.toString size
+            ]
         ]
 
 
@@ -305,32 +370,18 @@ view model =
     in
     case model.layoutMode of
         Centered ->
+            let
+                sidebar c =
+                    el [ width fill, height fill, Background.color c ] none
+            in
             row [ width fill, height fill ]
-                [ el
-                    [ width fill
-                    , height fill
-                    , Background.color Colors.red
-                    ]
-                  -- none
-                  <|
-                    column []
-                        (List.map
-                            (\{ id, firstName, lastName, isActive } ->
-                                text <| String.fromInt id ++ ": " ++ firstName ++ " " ++ lastName
-                            )
-                            model.users
-                        )
+                [ sidebar Colors.red
                 , el
                     [ width <| minimum 400 <| fillPortion 2
                     , height fill
                     ]
                     app
-                , el
-                    [ width fill
-                    , height fill
-                    , Background.color Colors.green
-                    ]
-                    none
+                , sidebar Colors.green
                 ]
 
         _ ->
@@ -341,7 +392,7 @@ view model =
 ---- PROGRAM ----
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
     Browser.element
         { view =
@@ -351,7 +402,11 @@ main =
                     , height fill
                     , Background.color Theme.background
                     ]
-        , init = \_ -> init
+        , init = init
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions =
+            \_ ->
+                Sub.batch
+                    [ windowSize SetSize
+                    ]
         }
