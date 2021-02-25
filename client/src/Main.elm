@@ -78,6 +78,9 @@ type alias Model =
     , size : Size Int
     , dropdownState : Dropdown.State Household.Status
     , colCount : Int
+    , inputUsername : String
+    , inputPassword : String
+    , passwordVisible : Bool
     }
 
 
@@ -139,6 +142,9 @@ init { path, size } =
             , size = size
             , dropdownState = Dropdown.init "status"
             , colCount = 3
+            , inputUsername = ""
+            , inputPassword = ""
+            , passwordVisible = False
             }
                 |> update (SetPage <| Maybe.withDefault Home (pathPage path))
     in
@@ -166,6 +172,7 @@ type Msg
     | OnChange FormField.Field String
     | OnFocus FormField.Field
     | OnLoseFocus FormField.Field
+    | OnVisibilityToggled FormField.Field
     | AddTask Household.Task
     | TaskSetTitle TaskId String
     | TaskSetDescription TaskId String
@@ -191,13 +198,28 @@ update msg model =
             simply model
 
         OnChange f s ->
-            simply model
+            case f of
+                FormField.FieldUsername ->
+                    simply { model | inputUsername = s }
+
+                FormField.FieldCurrentPassword ->
+                    simply { model | inputPassword = s }
+
+                _ ->
+                    simply model
 
         OnFocus f ->
             simply model
 
         OnLoseFocus f ->
             simply model
+
+        OnVisibilityToggled field ->
+            if field == FormField.FieldCurrentPassword then
+                simply { model | passwordVisible = not model.passwordVisible }
+
+            else
+                simply model
 
         AddTask task ->
             simply { model | tasks = Table.add ( task, Dropdown.init "status" ) model.tasks |> Tuple.second }
@@ -396,7 +418,7 @@ footer { mText } =
 
 
 appMain : Model -> Element Msg
-appMain { page, tasks, size, colCount } =
+appMain { page, tasks, inputUsername, inputPassword, passwordVisible, size, colCount } =
     let
         attrs =
             [ padding 16
@@ -429,8 +451,8 @@ appMain { page, tasks, size, colCount } =
                 [ text "login page (TODO)"
                 , FormField.inputText []
                     { field = FormField.FieldUsername
-                    , fieldValue = ""
-                    , helperText = Just (text "helper-text!")
+                    , fieldValue = inputUsername
+                    , helperText = Nothing
                     , inputType = Input.text
                     , inputTypeAttrs = []
                     , label = text "label:username"
@@ -440,13 +462,44 @@ appMain { page, tasks, size, colCount } =
                     , msgOnFocus = OnFocus
                     , msgOnLoseFocus = OnLoseFocus
                     }
+                , FormField.inputPassword []
+                    { field = FormField.FieldCurrentPassword
+                    , fieldValue = inputPassword
+                    , helperText = Nothing
+                    , inputType = Input.currentPassword
+                    , inputTypeAttrs = []
+                    , label = text "label:password"
+                    , maybeFieldFocused = Nothing
+                    , maybeMsgOnEnter = Nothing
+                    , maybeShowHidePassword =
+                        let
+                            tb t =
+                                Input.button []
+                                    { label = text t, onPress = Nothing }
+
+                            hide =
+                                tb "hide"
+
+                            show =
+                                tb "show"
+                        in
+                        Just <|
+                            { maybeHideIcon =
+                                Just hide
+                            , maybeShowIcon =
+                                Just show
+                            , msgOnViewToggle = OnVisibilityToggled
+                            }
+                    , msgOnChange = OnChange
+                    , msgOnFocus = OnFocus
+                    , msgOnLoseFocus = OnLoseFocus
+                    , show = passwordVisible
+                    }
                 , Input.button [ padding 10 ]
                     { label = text "+rows", onPress = Just <| IncrementCols }
                 , text <| String.fromInt colCount
                 , Input.button [ padding 10 ]
                     { label = text "-rows", onPress = Just <| DecrementCols }
-
-                -- , FormField.inputPassword [] {}
                 , tasks
                     |> Table.pairs
                     |> List.map
