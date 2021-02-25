@@ -1,6 +1,6 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-export const dbModule = TypeOrmModule.forRoot({
+export const databaseTestingModule = TypeOrmModule.forRoot({
   type: 'sqlite',
   database: ':memory:',
   autoLoadEntities: true,

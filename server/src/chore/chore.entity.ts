@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { IsDate } from 'class-validator';
 
 @Entity()
 export class Chore {
@@ -12,5 +13,6 @@ export class Chore {
   description: string;
 
   @Column()
+  @IsDate()
   deadline: Date;
 }

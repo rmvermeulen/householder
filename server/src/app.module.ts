@@ -2,9 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { User } from './user/user.entity';
-import { UserModule } from './user/user.module';
 import { ChoreModule } from './chore/chore.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -15,6 +14,7 @@ import { ChoreModule } from './chore/chore.module';
       username: 'rasmus',
       database: 'householder',
       autoLoadEntities: true,
+      synchronize: true,
     }),
     UserModule,
     ChoreModule,

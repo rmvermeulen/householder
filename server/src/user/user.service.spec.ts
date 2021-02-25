@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { userMatcher } from '../testing/data.matchers';
-import { dbModule } from '../testing/db.module';
+import { databaseTestingModule } from '../testing/database.module';
 import { User } from './user.entity';
 import { UserService } from './user.service';
 
@@ -11,7 +11,7 @@ describe('UserService', () => {
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [dbModule, TypeOrmModule.forFeature([User])],
+      imports: [databaseTestingModule, TypeOrmModule.forFeature([User])],
       providers: [UserService],
     }).compile();
 

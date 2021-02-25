@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { dbModule } from '../testing/db.module';
+import { databaseTestingModule } from '../testing/database.module';
 import { choreMatcher } from '../testing/data.matchers';
 import { Chore } from './chore.entity';
 import { ChoreService } from './chore.service';
@@ -11,7 +11,7 @@ describe('ChoreService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [dbModule, TypeOrmModule.forFeature([Chore])],
+      imports: [databaseTestingModule, TypeOrmModule.forFeature([Chore])],
       providers: [ChoreService],
     }).compile();
 

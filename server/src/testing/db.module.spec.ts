@@ -1,6 +1,6 @@
 import { TestingModule, Test } from '@nestjs/testing';
 import { EntityManager } from 'typeorm';
-import { dbModule } from './db.module';
+import { databaseTestingModule } from './database.module';
 
 describe('Database testing module', () => {
   it('is required for database services', async () => {
@@ -9,7 +9,7 @@ describe('Database testing module', () => {
   });
   it('provides the services we want to be able to mock', async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [dbModule],
+      imports: [databaseTestingModule],
     }).compile();
     const mgr: EntityManager = module.get(EntityManager);
     expect(mgr).toBeDefined();
