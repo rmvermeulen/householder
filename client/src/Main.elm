@@ -139,7 +139,7 @@ init { path, size } =
                   , "This is just for testing. Don't worry about it."
                   )
                 ]
-                    |> List.map (\( title, description ) -> Chore.quick title description)
+                    |> List.indexedMap (\id ( title, description ) -> Chore.quick id title description)
             , mText = Nothing
             , users =
                 [ User 0 "Bob" "Alderson" "bob03" (hashPassword "abcd") True

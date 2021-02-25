@@ -36,7 +36,7 @@ nextStatus status =
 
 
 type alias Id =
-    String
+    Int
 
 
 type alias Model =
@@ -50,15 +50,15 @@ type alias Model =
     }
 
 
-quick : String -> String -> Model
-quick title description =
-    Model "" title description [] False Nothing Todo
+quick : Id -> String -> String -> Model
+quick id title description =
+    Model id title description [] False Nothing Todo
 
 
 type Msg
     = SetTitle String
     | SetDescription String
-    | SetBlockList String
+    | SetBlockList (List Id)
     | SetExpanded Bool
     | SetStatus Status
 
@@ -69,62 +69,81 @@ update msg model =
         simply m =
             ( m, Cmd.none )
     in
-    simply model
+    case msg of
+        SetTitle title ->
+            simply { model | title = title }
+
+        SetDescription description ->
+            simply { model | description = description }
+
+        SetBlockList blocks ->
+            simply { model | blocks = blocks }
+
+        SetExpanded expanded ->
+            simply { model | expanded = expanded }
+
+        SetStatus status ->
+            simply { model | status = status }
 
 
 view : Model -> Element Msg
-view { title, description, status } =
-    Card.simpleWithTitle "Task" title <|
-        column
-            [ width fill
-            , height fill
-            ]
-            [ row [ width fill, height fill ]
-                [ paragraph [ width fill ] [ text description ]
-                , el
-                    [ width <| px 80
-                    , height <| px 80
-                    , padding 10
-                    , Font.center
-                    , Background.color Color.green
+view { title, description, status, expanded } =
+    if expanded then
+        Card.simpleWithTitle "Task" title <|
+            column
+                [ width fill
+                , height fill
+                ]
+                [ row [ width fill, height fill ]
+                    [ paragraph [ width fill ] [ text description ]
+                    , el
+                        [ width <| px 80
+                        , height <| px 80
+                        , padding 10
+                        , Font.center
+                        , Background.color Color.green
+                        ]
+                      <|
+                        text "IMAGE"
                     ]
-                  <|
-                    text "IMAGE"
-                ]
-            , row [ spacing 10, padding 10 ]
-                [ Input.button [ padding 4, Border.width 1, Font.color Color.red ]
-                    { label = text "clear title"
-                    , onPress = Just <| SetTitle ""
+                , row [ spacing 10, padding 10 ]
+                    [ Input.button [ padding 4, Border.width 1, Font.color Color.red ]
+                        { label = text "clear title"
+                        , onPress = Just <| SetTitle ""
+                        }
+                    , Input.button [ padding 4, Border.width 1, Font.color Color.red ]
+                        { label = text "clear description"
+                        , onPress = Just <| SetDescription ""
+                        }
+                    ]
+                , let
+                    ( color, string ) =
+                        case status of
+                            Todo ->
+                                ( Background.color Color.blue, "Todo" )
+
+                            Done ->
+                                ( Background.color Color.green, "Done" )
+
+                            Disabled ->
+                                ( Background.color <| Color.red, "Disabled" )
+
+                            Planned ->
+                                ( Background.color Color.purple, "Planned" )
+                  in
+                  Input.button [ color, padding 10, Border.rounded 5 ]
+                    { label = text string
+                    , onPress = Just <| SetStatus (nextStatus status)
                     }
-                , Input.button [ padding 4, Border.width 1, Font.color Color.red ]
-                    { label = text "clear description"
-                    , onPress = Just <| SetDescription ""
-                    }
+                , Button.button
+                    [ Medium
+                    , Success
+                    , Outlined
+                    ]
+                    Nothing
+                    "Button"
                 ]
-            , let
-                ( color, string ) =
-                    case status of
-                        Todo ->
-                            ( Background.color Color.blue, "Todo" )
 
-                        Done ->
-                            ( Background.color Color.green, "Done" )
-
-                        Disabled ->
-                            ( Background.color <| Color.red, "Disabled" )
-
-                        Planned ->
-                            ( Background.color Color.purple, "Planned" )
-              in
-              Input.button [ color, padding 10, Border.rounded 5 ]
-                { label = text string
-                , onPress = Just <| SetStatus (nextStatus status)
-                }
-            , Button.button
-                [ Medium
-                , Success
-                , Outlined
-                ]
-                Nothing
-                "Button"
-            ]
+    else
+        Card.simple <|
+            Button.button [] (Just <| SetExpanded <| not expanded) title
