@@ -2,6 +2,7 @@ port module Main exposing (..)
 
 import Binary
 import Browser
+import Chore
 import Debug
 import Element exposing (..)
 import Element.Background as Background
@@ -14,7 +15,6 @@ import Framework.Color as Color
 import Framework.FormField as FormField
 import Framework.Modifier exposing (Modifier(..))
 import Grid
-import Household
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
@@ -75,7 +75,7 @@ pathPage path =
 
 
 type alias Model =
-    { tasks : Table Household.Task
+    { chores : List Chore.Model
     , mText : Maybe String
     , users : List User
     , mUser : Maybe User
@@ -107,39 +107,39 @@ init : Flags -> ( Model, Cmd Msg )
 init { path, size } =
     let
         ( model, cmd ) =
-            { tasks =
-                [ Household.createTask
-                    "Some task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Another task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Some task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Another task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Some task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Another task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Some task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Another task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Some task"
-                    "This is just for testing. Don't worry about it."
-                , Household.createTask
-                    "Another task"
-                    "This is just for testing. Don't worry about it."
+            { chores =
+                [ ( "Some task"
+                  , "This is just for testing. Don't worry about it."
+                  )
+                , ( "Another task"
+                  , "This is just for testing. Don't worry about it."
+                  )
+                , ( "Some task"
+                  , "This is just for testing. Don't worry about it."
+                  )
+                , ( "Another task"
+                  , "This is just for testing. Don't worry about it."
+                  )
+                , ( "Some task"
+                  , "This is just for testing. Don't worry about it."
+                  )
+                , ( "Another task"
+                  , "This is just for testing. Don't worry about it."
+                  )
+                , ( "Some task"
+                  , "This is just for testing. Don't worry about it."
+                  )
+                , ( "Another task"
+                  , "This is just for testing. Don't worry about it."
+                  )
+                , ( "Some task"
+                  , "This is just for testing. Don't worry about it."
+                  )
+                , ( "Another task"
+                  , "This is just for testing. Don't worry about it."
+                  )
                 ]
-                    |> Table.fromList
+                    |> List.map (\( title, description ) -> Chore.quick title description)
             , mText = Nothing
             , users =
                 [ User 0 "Bob" "Alderson" "bob03" (hashPassword "abcd") True
@@ -167,18 +167,12 @@ init { path, size } =
 ---- UPDATE ----
 
 
-type alias TaskId =
-    Table.Id Household.Task
-
-
 type Msg
     = NoOp
     | LoginMsg Login.Msg
     | LoginUser Login.LoginData
-    | AddTask Household.Task
-    | TaskSetTitle TaskId String
-    | TaskSetDescription TaskId String
-    | TaskSetStatus TaskId Household.Status
+    | AddChore Chore.Model
+    | ChoreMsg Chore.Id Chore.Msg
     | ReceiveUsers (Result Http.Error (List User))
     | SetUsers (List User)
     | SetPage Page
@@ -253,29 +247,40 @@ update msg model =
                     in
                     ( { model | login = login }, Cmd.map LoginMsg cmd )
 
-        AddTask task ->
-            simply { model | tasks = Table.add task model.tasks |> Tuple.second }
+        AddChore chore ->
+            simply { model | chores = chore :: model.chores }
 
-        TaskSetTitle id title ->
+        ChoreMsg id choreMsg ->
             let
-                tasks =
-                    Table.mapSingle id (\task -> { task | title = title }) model.tasks
-            in
-            simply { model | tasks = tasks }
+                ( chores, cmds ) =
+                    model.chores
+                        |> List.map
+                            (\chore ->
+                                if chore.id == id then
+                                    let
+                                        ( updated, cmd ) =
+                                            Chore.update choreMsg chore
+                                    in
+                                    ( updated, Just ( id, cmd ) )
 
-        TaskSetDescription id description ->
-            let
-                tasks =
-                    Table.mapSingle id (\task -> { task | description = description }) model.tasks
+                                else
+                                    ( chore, Nothing )
+                            )
+                        |> List.unzip
             in
-            simply { model | tasks = tasks }
+            ( { model | chores = chores }
+            , cmds
+                |> List.filterMap
+                    (\mData ->
+                        case mData of
+                            Just ( choreId, cmd ) ->
+                                Just <| Cmd.map (ChoreMsg choreId) cmd
 
-        TaskSetStatus id status ->
-            let
-                tasks =
-                    Table.mapSingle id (\task -> { task | status = status }) model.tasks
-            in
-            simply { model | tasks = tasks }
+                            Nothing ->
+                                Nothing
+                    )
+                |> Cmd.batch
+            )
 
         ReceiveUsers (Ok users) ->
             update (SetUsers users) model
@@ -337,23 +342,12 @@ footer { mText } =
 
 
 appMain : Model -> Element Msg
-appMain { login, page, users, tasks, size } =
-    let
-        attrs =
-            [ padding 16
-            , Background.color Color.white
-            , width fill
-            , height fill
-            ]
-    in
+appMain { login, page, users, chores, size } =
     case page of
         Home ->
-            Home.view TaskSetStatus
-                TaskSetTitle
-                TaskSetDescription
-                attrs
+            Home.view (ChoreMsg >> Element.map)
                 { size = size
-                , tasks = tasks
+                , chores = chores
                 }
 
         Login ->
