@@ -3,7 +3,6 @@ port module Main exposing (..)
 import Binary
 import Browser
 import Debug
-import Dropdown
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -20,7 +19,9 @@ import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode
+import Pages.Home as Home
 import Pages.Login as Login
+import Pages.Users as Users
 import SHA
 import Table exposing (..)
 import Theme
@@ -74,13 +75,12 @@ pathPage path =
 
 
 type alias Model =
-    { tasks : Table ( Household.Task, Dropdown.State Household.Status )
+    { tasks : Table Household.Task
     , mText : Maybe String
     , users : List User
     , mUser : Maybe User
     , page : Page
     , size : Size Int
-    , dropdownState : Dropdown.State Household.Status
     , login : Login.Model
     }
 
@@ -139,7 +139,6 @@ init { path, size } =
                     "Another task"
                     "This is just for testing. Don't worry about it."
                 ]
-                    |> List.map (\task -> ( task, Dropdown.init "status" ))
                     |> Table.fromList
             , mText = Nothing
             , users =
@@ -149,7 +148,6 @@ init { path, size } =
             , mUser = Nothing
             , page = Login
             , size = size
-            , dropdownState = Dropdown.init "status"
             , login = Login.init
             }
                 |> update (SetPage <| Maybe.withDefault Home (pathPage path))
@@ -170,7 +168,7 @@ init { path, size } =
 
 
 type alias TaskId =
-    Table.Id ( Household.Task, Dropdown.State Household.Status )
+    Table.Id Household.Task
 
 
 type Msg
@@ -185,8 +183,6 @@ type Msg
     | SetUsers (List User)
     | SetPage Page
     | SetSize (Size Int)
-    | DropdownMsg TaskId (Dropdown.Msg Household.Status)
-    | DropdownPicked TaskId (Maybe Household.Status)
 
 
 find : (item -> Bool) -> List item -> Maybe item
@@ -258,26 +254,26 @@ update msg model =
                     ( { model | login = login }, Cmd.map LoginMsg cmd )
 
         AddTask task ->
-            simply { model | tasks = Table.add ( task, Dropdown.init "status" ) model.tasks |> Tuple.second }
+            simply { model | tasks = Table.add task model.tasks |> Tuple.second }
 
         TaskSetTitle id title ->
             let
                 tasks =
-                    Table.mapSingle id (Tuple.mapFirst (\task -> { task | title = title })) model.tasks
+                    Table.mapSingle id (\task -> { task | title = title }) model.tasks
             in
             simply { model | tasks = tasks }
 
         TaskSetDescription id description ->
             let
                 tasks =
-                    Table.mapSingle id (Tuple.mapFirst (\task -> { task | description = description })) model.tasks
+                    Table.mapSingle id (\task -> { task | description = description }) model.tasks
             in
             simply { model | tasks = tasks }
 
         TaskSetStatus id status ->
             let
                 tasks =
-                    Table.mapSingle id (Tuple.mapFirst (\task -> { task | status = status })) model.tasks
+                    Table.mapSingle id (\task -> { task | status = status }) model.tasks
             in
             simply { model | tasks = tasks }
 
@@ -305,116 +301,9 @@ update msg model =
         SetSize size ->
             simply { model | size = size }
 
-        DropdownMsg tid ddMsg ->
-            let
-                tasks =
-                    Table.mapSingle tid
-                        (Tuple.mapSecond
-                            (\state ->
-                                let
-                                    foo : ( Dropdown.State Household.Status, Cmd Msg )
-                                    foo =
-                                        Dropdown.update (dropdownConfig tid) ddMsg state taskOptionsList
-
-                                    ( s, c ) =
-                                        foo
-                                in
-                                s
-                            )
-                        )
-                        model.tasks
-            in
-            simply { model | tasks = tasks }
-
-        DropdownPicked tid mString ->
-            case mString of
-                Just string ->
-                    let
-                        tasks : Table ( Household.Task, Dropdown.State Household.Status )
-                        tasks =
-                            let
-                                updateTask : ( Household.Task, Dropdown.State Household.Status ) -> ( Household.Task, Dropdown.State Household.Status )
-                                updateTask =
-                                    Tuple.mapFirst (\task -> { task | status = string })
-                            in
-                            Table.mapSingle tid updateTask model.tasks
-                    in
-                    simply { model | tasks = tasks }
-
-                Nothing ->
-                    simply model
-
 
 
 ---- VIEW ----
-
-
-viewTask : ( TaskId, ( Household.Task, Dropdown.State Household.Status ) ) -> Element Msg
-viewTask ( id, ( task, state ) ) =
-    let
-        { title, description, status } =
-            task
-    in
-    Card.simpleWithTitle "Task" title <|
-        column
-            [ width fill
-            , height fill
-            ]
-            [ row [ width fill, height fill ]
-                [ paragraph [ width fill ] [ text description ]
-                , el
-                    [ width <| px 80
-                    , height <| px 80
-                    , padding 10
-                    , Font.center
-                    , Background.color Color.green
-                    ]
-                  <|
-                    text "IMAGE"
-                ]
-            , row [ spacing 10, padding 10 ]
-                [ Input.button [ padding 4, Border.width 1, Font.color Color.red ]
-                    { label = text "clear title"
-                    , onPress = Just <| TaskSetTitle id ""
-                    }
-                , Input.button [ padding 4, Border.width 1, Font.color Color.red ]
-                    { label = text "clear description"
-                    , onPress = Just <| TaskSetDescription id ""
-                    }
-                ]
-            , let
-                ( color, string ) =
-                    case status of
-                        Household.Todo ->
-                            ( Background.color Color.blue, "Todo" )
-
-                        Household.Done ->
-                            ( Background.color Color.green, "Done" )
-
-                        Household.Disabled ->
-                            ( Background.color <| Color.red, "Disabled" )
-
-                        Household.Planned ->
-                            ( Background.color Color.purple, "Planned" )
-              in
-              Input.button [ color, padding 10, Border.rounded 5 ]
-                { label = text string
-                , onPress =
-                    Just <|
-                        TaskSetStatus id <|
-                            Household.nextStatus status
-                }
-            , Dropdown.view (dropdownConfig id)
-                state
-                taskOptionsList
-            , Button.button
-                [ Medium
-                , Success
-                , Outlined
-                ]
-                Nothing
-                "Button"
-            ]
 
 
 header : Model -> Element Msg
@@ -448,7 +337,7 @@ footer { mText } =
 
 
 appMain : Model -> Element Msg
-appMain { login, page, tasks, size } =
+appMain { login, page, users, tasks, size } =
     let
         attrs =
             [ padding 16
@@ -459,22 +348,13 @@ appMain { login, page, tasks, size } =
     in
     case page of
         Home ->
-            row attrs
-                [ tasks
-                    |> Table.pairs
-                    |> List.map viewTask
-                    |> Grid.view (max 1 (size.x // 200))
-                        [ fillPortion 8
-                            |> minimum (min size.x 800)
-                            |> maximum 1200
-                            |> width
-                        , padding 10
-                        , spacing 10
-                        ]
-                        (always [ width (px 200), height (px 120) ])
-                , el [ width fill, height fill ]
-                    none
-                ]
+            Home.view TaskSetStatus
+                TaskSetTitle
+                TaskSetDescription
+                attrs
+                { size = size
+                , tasks = tasks
+                }
 
         Login ->
             login
@@ -482,7 +362,9 @@ appMain { login, page, tasks, size } =
                 |> el [ width shrink, height fill, padding 80 ]
 
         Users ->
-            text "users overview (TODO)"
+            Users.view
+                { users = users
+                }
 
 
 view : Model -> Element Msg
@@ -523,28 +405,3 @@ main =
                     [ windowSize SetSize
                     ]
         }
-
-
-
----- config
-
-
-dropdownConfig : TaskId -> Dropdown.Config Household.Status Msg
-dropdownConfig tid =
-    let
-        itemToPrompt item =
-            text <| Debug.toString item
-
-        itemToElement selected highlighted item =
-            text <| Debug.toString item
-    in
-    Dropdown.basic (DropdownMsg tid) (DropdownPicked tid) itemToPrompt itemToElement
-
-
-taskOptionsList : List Household.Status
-taskOptionsList =
-    [ Household.Todo
-    , Household.Done
-    , Household.Disabled
-    , Household.Planned
-    ]
