@@ -13,11 +13,13 @@ import Framework.Card as Card
 import Framework.Color as Color
 import Framework.FormField as FormField
 import Framework.Modifier exposing (Modifier(..))
+import Grid
 import Household
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode
+import Pages.Login
 import Table exposing (..)
 import Theme
 import User exposing (User)
@@ -77,10 +79,7 @@ type alias Model =
     , page : Page
     , size : Size Int
     , dropdownState : Dropdown.State Household.Status
-    , colCount : Int
-    , inputUsername : String
-    , inputPassword : String
-    , passwordVisible : Bool
+    , login : Pages.Login.Model
     }
 
 
@@ -141,10 +140,7 @@ init { path, size } =
             , page = Login
             , size = size
             , dropdownState = Dropdown.init "status"
-            , colCount = 3
-            , inputUsername = ""
-            , inputPassword = ""
-            , passwordVisible = False
+            , login = Pages.Login.init
             }
                 |> update (SetPage <| Maybe.withDefault Home (pathPage path))
     in
@@ -169,10 +165,8 @@ type alias TaskId =
 
 type Msg
     = NoOp
-    | OnChange FormField.Field String
-    | OnFocus FormField.Field
-    | OnLoseFocus FormField.Field
-    | OnVisibilityToggled FormField.Field
+    | LoginMsg Pages.Login.Msg
+    | LoginUser User
     | AddTask Household.Task
     | TaskSetTitle TaskId String
     | TaskSetDescription TaskId String
@@ -183,8 +177,6 @@ type Msg
     | SetSize (Size Int)
     | DropdownMsg TaskId (Dropdown.Msg Household.Status)
     | DropdownPicked TaskId (Maybe Household.Status)
-    | IncrementCols
-    | DecrementCols
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -197,29 +189,15 @@ update msg model =
         NoOp ->
             simply model
 
-        OnChange f s ->
-            case f of
-                FormField.FieldUsername ->
-                    simply { model | inputUsername = s }
+        LoginMsg loginMsg ->
+            let
+                ( login, cmd ) =
+                    Pages.Login.update loginMsg model.login
+            in
+            ( { model | login = login }, Cmd.map LoginMsg cmd )
 
-                FormField.FieldCurrentPassword ->
-                    simply { model | inputPassword = s }
-
-                _ ->
-                    simply model
-
-        OnFocus f ->
-            simply model
-
-        OnLoseFocus f ->
-            simply model
-
-        OnVisibilityToggled field ->
-            if field == FormField.FieldCurrentPassword then
-                simply { model | passwordVisible = not model.passwordVisible }
-
-            else
-                simply model
+        LoginUser user ->
+            simply { model | mUser = Just user }
 
         AddTask task ->
             simply { model | tasks = Table.add ( task, Dropdown.init "status" ) model.tasks |> Tuple.second }
@@ -307,12 +285,6 @@ update msg model =
 
                 Nothing ->
                     simply model
-
-        IncrementCols ->
-            simply { model | colCount = model.colCount + 1 }
-
-        DecrementCols ->
-            simply { model | colCount = model.colCount - 1 }
 
 
 
@@ -418,7 +390,7 @@ footer { mText } =
 
 
 appMain : Model -> Element Msg
-appMain { page, tasks, inputUsername, inputPassword, passwordVisible, size, colCount } =
+appMain { login, page, tasks, size } =
     let
         attrs =
             [ padding 16
@@ -433,7 +405,7 @@ appMain { page, tasks, inputUsername, inputPassword, passwordVisible, size, colC
                 [ tasks
                     |> Table.pairs
                     |> List.map viewTask
-                    |> viewGrid colCount
+                    |> Grid.view (max 1 (size.x // 200))
                         [ fillPortion 8
                             |> minimum (min size.x 800)
                             |> maximum 1200
@@ -447,87 +419,9 @@ appMain { page, tasks, inputUsername, inputPassword, passwordVisible, size, colC
                 ]
 
         Login ->
-            column [ width fill, height fill ]
-                [ text "login page (TODO)"
-                , FormField.inputText []
-                    { field = FormField.FieldUsername
-                    , fieldValue = inputUsername
-                    , helperText = Nothing
-                    , inputType = Input.text
-                    , inputTypeAttrs = []
-                    , label = text "label:username"
-                    , maybeFieldFocused = Nothing
-                    , maybeMsgOnEnter = Nothing
-                    , msgOnChange = OnChange
-                    , msgOnFocus = OnFocus
-                    , msgOnLoseFocus = OnLoseFocus
-                    }
-                , FormField.inputPassword []
-                    { field = FormField.FieldCurrentPassword
-                    , fieldValue = inputPassword
-                    , helperText = Nothing
-                    , inputType = Input.currentPassword
-                    , inputTypeAttrs = []
-                    , label = text "label:password"
-                    , maybeFieldFocused = Nothing
-                    , maybeMsgOnEnter = Nothing
-                    , maybeShowHidePassword =
-                        let
-                            tb t =
-                                Input.button []
-                                    { label = text t, onPress = Nothing }
-
-                            hide =
-                                tb "hide"
-
-                            show =
-                                tb "show"
-                        in
-                        Just <|
-                            { maybeHideIcon =
-                                Just hide
-                            , maybeShowIcon =
-                                Just show
-                            , msgOnViewToggle = OnVisibilityToggled
-                            }
-                    , msgOnChange = OnChange
-                    , msgOnFocus = OnFocus
-                    , msgOnLoseFocus = OnLoseFocus
-                    , show = passwordVisible
-                    }
-                , Input.button [ padding 10 ]
-                    { label = text "+rows", onPress = Just <| IncrementCols }
-                , text <| String.fromInt colCount
-                , Input.button [ padding 10 ]
-                    { label = text "-rows", onPress = Just <| DecrementCols }
-                , tasks
-                    |> Table.pairs
-                    |> List.map
-                        (\( _, ( { title }, _ ) ) ->
-                            title
-                                |> text
-                                |> el [ padding 10 ]
-                        )
-                    |> viewGrid colCount
-                        [ fillPortion 8
-                            |> minimum (min size.x 800)
-                            |> maximum 1200
-                            |> width
-                        , padding 10
-                        , spacing 10
-                        ]
-                        (\( x, y ) ->
-                            [ fill |> minimum 200 |> maximum 200 |> width
-                            , fill |> minimum 80 |> maximum 80 |> height
-                            , Background.color <|
-                                if modBy 2 (x + y) == 0 then
-                                    Color.success
-
-                                else
-                                    Color.warning
-                            ]
-                        )
-                ]
+            login
+                |> Pages.Login.view LoginUser (Element.map LoginMsg)
+                |> el [ width shrink, height fill, padding 80 ]
 
         Users ->
             text "users overview (TODO)"
@@ -547,35 +441,6 @@ view model =
             appMain model
         , el [ width fill, height fill ] <| footer model
         ]
-
-
-viewGrid : Int -> List (Attribute msg) -> (( Int, Int ) -> List (Attribute msg)) -> List (Element msg) -> Element msg
-viewGrid colCount attrs getChildAttrs children =
-    let
-        indexed =
-            children
-                |> List.indexedMap Tuple.pair
-                |> List.map (Tuple.mapFirst (\n -> n // colCount))
-
-        rows =
-            let
-                firstEquals n =
-                    Tuple.first >> (==) n
-            in
-            List.range 0 (List.length children)
-                |> List.map (\i -> List.filter (firstEquals i) indexed)
-                |> List.map (List.map Tuple.second)
-                |> List.indexedMap
-                    (\y group ->
-                        let
-                            withAttrs x child =
-                                el (getChildAttrs ( x, y )) child
-                        in
-                        group |> List.indexedMap withAttrs
-                    )
-                |> List.map (row [ width fill, height fill ])
-    in
-    column attrs rows
 
 
 
