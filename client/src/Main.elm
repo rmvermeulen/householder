@@ -77,6 +77,7 @@ type alias Model =
     , page : Page
     , size : Size Int
     , dropdownState : Dropdown.State Household.Status
+    , colCount : Int
     }
 
 
@@ -101,6 +102,30 @@ init { path, size } =
                 , Household.createTask
                     "Another task"
                     "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Some task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Another task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Some task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Another task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Some task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Another task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Some task"
+                    "This is just for testing. Don't worry about it."
+                , Household.createTask
+                    "Another task"
+                    "This is just for testing. Don't worry about it."
                 ]
                     |> List.map (\task -> ( task, Dropdown.init "status" ))
                     |> Table.fromList
@@ -113,6 +138,7 @@ init { path, size } =
             , page = Login
             , size = size
             , dropdownState = Dropdown.init "status"
+            , colCount = 3
             }
                 |> update (SetPage <| Maybe.withDefault Home (pathPage path))
     in
@@ -150,6 +176,8 @@ type Msg
     | SetSize (Size Int)
     | DropdownMsg TaskId (Dropdown.Msg Household.Status)
     | DropdownPicked TaskId (Maybe Household.Status)
+    | IncrementCols
+    | DecrementCols
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -258,6 +286,12 @@ update msg model =
                 Nothing ->
                     simply model
 
+        IncrementCols ->
+            simply { model | colCount = model.colCount + 1 }
+
+        DecrementCols ->
+            simply { model | colCount = model.colCount - 1 }
+
 
 
 ---- VIEW ----
@@ -362,7 +396,7 @@ footer { mText } =
 
 
 appMain : Model -> Element Msg
-appMain { page, tasks, size } =
+appMain { page, tasks, size, colCount } =
     let
         attrs =
             [ padding 16
@@ -374,17 +408,18 @@ appMain { page, tasks, size } =
     case page of
         Home ->
             row attrs
-                [ column
-                    [ fillPortion 8
-                        |> minimum (min size.x 800)
-                        |> maximum 1200
-                        |> width
-                    ]
-                    [ tasks
-                        |> Table.pairs
-                        |> List.map viewTask
-                        |> column [ width fill, padding 10, spacing 10 ]
-                    ]
+                [ tasks
+                    |> Table.pairs
+                    |> List.map viewTask
+                    |> viewGrid colCount
+                        [ fillPortion 8
+                            |> minimum (min size.x 800)
+                            |> maximum 1200
+                            |> width
+                        , padding 10
+                        , spacing 10
+                        ]
+                        (always [ width (px 200), height (px 120) ])
                 , el [ width fill, height fill ]
                     none
                 ]
@@ -405,8 +440,40 @@ appMain { page, tasks, size } =
                     , msgOnFocus = OnFocus
                     , msgOnLoseFocus = OnLoseFocus
                     }
+                , Input.button [ padding 10 ]
+                    { label = text "+rows", onPress = Just <| IncrementCols }
+                , text <| String.fromInt colCount
+                , Input.button [ padding 10 ]
+                    { label = text "-rows", onPress = Just <| DecrementCols }
 
                 -- , FormField.inputPassword [] {}
+                , tasks
+                    |> Table.pairs
+                    |> List.map
+                        (\( _, ( { title }, _ ) ) ->
+                            title
+                                |> text
+                                |> el [ padding 10 ]
+                        )
+                    |> viewGrid colCount
+                        [ fillPortion 8
+                            |> minimum (min size.x 800)
+                            |> maximum 1200
+                            |> width
+                        , padding 10
+                        , spacing 10
+                        ]
+                        (\( x, y ) ->
+                            [ fill |> minimum 200 |> maximum 200 |> width
+                            , fill |> minimum 80 |> maximum 80 |> height
+                            , Background.color <|
+                                if modBy 2 (x + y) == 0 then
+                                    Color.success
+
+                                else
+                                    Color.warning
+                            ]
+                        )
                 ]
 
         Users ->
@@ -427,6 +494,35 @@ view model =
             appMain model
         , el [ width fill, height fill ] <| footer model
         ]
+
+
+viewGrid : Int -> List (Attribute msg) -> (( Int, Int ) -> List (Attribute msg)) -> List (Element msg) -> Element msg
+viewGrid colCount attrs getChildAttrs children =
+    let
+        indexed =
+            children
+                |> List.indexedMap Tuple.pair
+                |> List.map (Tuple.mapFirst (\n -> n // colCount))
+
+        rows =
+            let
+                firstEquals n =
+                    Tuple.first >> (==) n
+            in
+            List.range 0 (List.length children)
+                |> List.map (\i -> List.filter (firstEquals i) indexed)
+                |> List.map (List.map Tuple.second)
+                |> List.indexedMap
+                    (\y group ->
+                        let
+                            withAttrs x child =
+                                el (getChildAttrs ( x, y )) child
+                        in
+                        group |> List.indexedMap withAttrs
+                    )
+                |> List.map (row [ width fill, height fill ])
+    in
+    column attrs rows
 
 
 
