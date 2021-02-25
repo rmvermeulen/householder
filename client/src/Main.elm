@@ -11,6 +11,7 @@ import Element.Input as Input
 import Framework.Button as Button
 import Framework.Card as Card
 import Framework.Color as Color
+import Framework.FormField as FormField
 import Framework.Modifier exposing (Modifier(..))
 import Household
 import Http
@@ -24,6 +25,9 @@ import Widget
 
 
 port windowSize : (Size Int -> msg) -> Sub msg
+
+
+port pathChanged : String -> Cmd msg
 
 
 
@@ -132,7 +136,11 @@ type alias TaskId =
 
 
 type Msg
-    = AddTask Household.Task
+    = NoOp
+    | OnChange FormField.Field String
+    | OnFocus FormField.Field
+    | OnLoseFocus FormField.Field
+    | AddTask Household.Task
     | TaskSetTitle TaskId String
     | TaskSetDescription TaskId String
     | TaskSetStatus TaskId Household.Status
@@ -151,6 +159,18 @@ update msg model =
             ( m, Cmd.none )
     in
     case msg of
+        NoOp ->
+            simply model
+
+        OnChange f s ->
+            simply model
+
+        OnFocus f ->
+            simply model
+
+        OnLoseFocus f ->
+            simply model
+
         AddTask task ->
             simply { model | tasks = Table.add ( task, Dropdown.init "status" ) model.tasks |> Tuple.second }
 
@@ -185,12 +205,16 @@ update msg model =
             simply { model | users = users }
 
         SetPage page ->
+            let
+                setPage p =
+                    ( { model | page = p }, pathChanged <| pagePath p )
+            in
             case model.mUser of
                 Just _ ->
-                    simply { model | page = page }
+                    setPage page
 
                 Nothing ->
-                    simply { model | page = Login }
+                    setPage Login
 
         SetSize size ->
             simply { model | size = size }
@@ -366,7 +390,24 @@ appMain { page, tasks, size } =
                 ]
 
         Login ->
-            text "login page (TODO)"
+            column [ width fill, height fill ]
+                [ text "login page (TODO)"
+                , FormField.inputText []
+                    { field = FormField.FieldUsername
+                    , fieldValue = ""
+                    , helperText = Just (text "helper-text!")
+                    , inputType = Input.text
+                    , inputTypeAttrs = []
+                    , label = text "label:username"
+                    , maybeFieldFocused = Nothing
+                    , maybeMsgOnEnter = Nothing
+                    , msgOnChange = OnChange
+                    , msgOnFocus = OnFocus
+                    , msgOnLoseFocus = OnLoseFocus
+                    }
+
+                -- , FormField.inputPassword [] {}
+                ]
 
         Users ->
             text "users overview (TODO)"
