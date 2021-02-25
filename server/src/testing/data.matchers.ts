@@ -4,3 +4,10 @@ export const userMatcher = {
   lastName: expect.any(String),
   isActive: expect.any(Boolean),
 };
+
+export const choreMatcher = {
+  id: expect.any(Number),
+  title: expect.any(String),
+  description: expect.any(String),
+  deadline: expect.any(Date),
+};

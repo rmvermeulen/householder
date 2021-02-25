@@ -12,11 +12,7 @@ export class UserService {
     return this.users.find();
   }
 
-  async getActiveUsers(): Promise<User[]> {
-    return this.users.find({ isActive: true });
-  }
-
-  async getUser(id: number): Promise<User> {
+  async findById(id: number): Promise<User> {
     return this.users.findOne({ id });
   }
 
@@ -24,5 +20,9 @@ export class UserService {
     data: Partial<User & { firstName: string; lastName: string }>,
   ): Promise<User> {
     return this.users.save(data);
+  }
+
+  async getActiveUsers(): Promise<User[]> {
+    return this.users.find({ isActive: true });
   }
 }

@@ -63,7 +63,7 @@ describe('UserService', () => {
     ]));
 
   it('can fetch a specific user', async () => {
-    const user = await service.getUser(1);
+    const user = await service.findById(1);
     expect(user).toBeDefined();
     expect(user).toBeInstanceOf(User);
     expect(user).toEqual({

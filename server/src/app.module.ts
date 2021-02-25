@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { User } from './user/user.entity';
 import { UserModule } from './user/user.module';
+import { ChoreModule } from './chore/chore.module';
 
 @Module({
   imports: [
@@ -13,9 +14,10 @@ import { UserModule } from './user/user.module';
       port: 5432,
       username: 'rasmus',
       database: 'householder',
-      entities: [User],
+      autoLoadEntities: true,
     }),
     UserModule,
+    ChoreModule,
   ],
   controllers: [AppController],
   providers: [AppService],
