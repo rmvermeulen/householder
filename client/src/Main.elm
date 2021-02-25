@@ -22,7 +22,7 @@ import Json.Encode as Encode
 import Pages.Login
 import Table exposing (..)
 import Theme
-import User exposing (User)
+import User exposing (HashedPassword(..), User)
 import Widget
 
 
@@ -133,8 +133,8 @@ init { path, size } =
                     |> Table.fromList
             , mText = Nothing
             , users =
-                [ User 0 "Bob" "Alderson" True
-                , User 1 "Karen" "Flim" True
+                [ User 0 "Bob" "Alderson" "" (Hex "") True
+                , User 1 "Karen" "Flim" "" (Hex "") True
                 ]
             , mUser = Nothing
             , page = Login

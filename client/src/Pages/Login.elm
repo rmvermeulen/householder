@@ -1,5 +1,6 @@
 module Pages.Login exposing (..)
 
+import Binary
 import Element exposing (..)
 import Element.Background as Background
 import Element.Font as Font
@@ -10,8 +11,9 @@ import Framework.Color as Color
 import Framework.FormField as FormField
 import Framework.Modifier as Modifier
 import Grid
+import SHA
 import Table
-import User exposing (User)
+import User exposing (HashedPassword(..), User)
 
 
 type alias Model =
@@ -125,8 +127,21 @@ view : (User -> msg) -> (Element Msg -> Element msg) -> Model -> Element msg
 view createUser remap { username, password, visible, mFocusedField } =
     Card.simpleWithTitle "Login" "" <|
         let
+            user : User
             user =
-                User 0 username password True
+                { id = 0
+                , firstName = ""
+                , lastName = ""
+                , username = username
+                , passwordHash =
+                    Hex
+                        (password
+                            |> Binary.fromStringAsUtf8
+                            |> SHA.sha256
+                            |> Binary.toHex
+                        )
+                , isActive = True
+                }
         in
         column
             [ width fill, height fill ]
