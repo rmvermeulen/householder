@@ -1,5 +1,6 @@
 port module Main exposing (..)
 
+import Binary
 import Browser
 import Debug
 import Dropdown
@@ -19,7 +20,8 @@ import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode
-import Pages.Login
+import Pages.Login as Login
+import SHA
 import Table exposing (..)
 import Theme
 import User exposing (HashedPassword(..), User)
@@ -79,7 +81,7 @@ type alias Model =
     , page : Page
     , size : Size Int
     , dropdownState : Dropdown.State Household.Status
-    , login : Pages.Login.Model
+    , login : Login.Model
     }
 
 
@@ -91,6 +93,14 @@ type alias Flags =
     { path : String
     , size : Size Int
     }
+
+
+hashPassword : String -> HashedPassword
+hashPassword =
+    Binary.fromStringAsUtf8
+        >> SHA.sha256
+        >> Binary.toHex
+        >> Hex
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -133,14 +143,14 @@ init { path, size } =
                     |> Table.fromList
             , mText = Nothing
             , users =
-                [ User 0 "Bob" "Alderson" "" (Hex "") True
-                , User 1 "Karen" "Flim" "" (Hex "") True
+                [ User 0 "Bob" "Alderson" "bob03" (hashPassword "abcd") True
+                , User 1 "Karen" "Flim" "kf" (hashPassword "abcd") True
                 ]
             , mUser = Nothing
             , page = Login
             , size = size
             , dropdownState = Dropdown.init "status"
-            , login = Pages.Login.init
+            , login = Login.init
             }
                 |> update (SetPage <| Maybe.withDefault Home (pathPage path))
     in
@@ -165,8 +175,8 @@ type alias TaskId =
 
 type Msg
     = NoOp
-    | LoginMsg Pages.Login.Msg
-    | LoginUser User
+    | LoginMsg Login.Msg
+    | LoginUser Login.LoginData
     | AddTask Household.Task
     | TaskSetTitle TaskId String
     | TaskSetDescription TaskId String
@@ -177,6 +187,11 @@ type Msg
     | SetSize (Size Int)
     | DropdownMsg TaskId (Dropdown.Msg Household.Status)
     | DropdownPicked TaskId (Maybe Household.Status)
+
+
+find : (item -> Bool) -> List item -> Maybe item
+find pred =
+    List.filter pred >> List.head
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -192,12 +207,55 @@ update msg model =
         LoginMsg loginMsg ->
             let
                 ( login, cmd ) =
-                    Pages.Login.update loginMsg model.login
+                    Login.update loginMsg model.login
             in
             ( { model | login = login }, Cmd.map LoginMsg cmd )
 
-        LoginUser user ->
-            simply { model | mUser = Just user }
+        LoginUser { username, passwordHash } ->
+            let
+                mUser =
+                    find (.username >> (==) username) model.users
+
+                result : Maybe Login.Error
+                result =
+                    case mUser of
+                        Just user ->
+                            if user.passwordHash == passwordHash then
+                                Nothing
+
+                            else
+                                Just Login.WrongPassword
+
+                        Nothing ->
+                            Just Login.UnknownUsername
+            in
+            case result of
+                Nothing ->
+                    let
+                        user : User
+                        user =
+                            let
+                                n =
+                                    1 + List.length model.users
+                            in
+                            { id = n * n
+                            , firstName = ""
+                            , lastName = ""
+                            , username = username
+                            , passwordHash = passwordHash
+                            , isActive = True
+                            }
+                    in
+                    update (SetPage Home) { model | mUser = Just user }
+
+                Just error ->
+                    let
+                        ( login, cmd ) =
+                            Just error
+                                |> Login.SetError
+                                |> (\m -> Login.update m model.login)
+                    in
+                    ( { model | login = login }, Cmd.map LoginMsg cmd )
 
         AddTask task ->
             simply { model | tasks = Table.add ( task, Dropdown.init "status" ) model.tasks |> Tuple.second }
@@ -420,7 +478,7 @@ appMain { login, page, tasks, size } =
 
         Login ->
             login
-                |> Pages.Login.view LoginUser (Element.map LoginMsg)
+                |> Login.view LoginUser (Element.map LoginMsg)
                 |> el [ width shrink, height fill, padding 80 ]
 
         Users ->

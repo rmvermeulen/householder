@@ -21,7 +21,13 @@ type alias Model =
     , password : String
     , visible : Bool
     , mFocusedField : Maybe FormField.Field
+    , mError : Maybe Error
     }
+
+
+type Error
+    = UnknownUsername
+    | WrongPassword
 
 
 type Msg
@@ -29,11 +35,12 @@ type Msg
     | RemoveFocus FormField.Field
     | SetInput FormField.Field String
     | ToggleVisibility FormField.Field
+    | SetError (Maybe Error)
 
 
 init : Model
 init =
-    Model "" "" False Nothing
+    Model "" "" False Nothing Nothing
 
 
 update : Msg -> Model -> ( Model, Cmd msg )
@@ -68,13 +75,18 @@ update msg model =
             else
                 simply model
 
+        SetError mError ->
+            simply { model | mError = mError }
 
-viewUsername : Maybe FormField.Field -> String -> Element Msg
-viewUsername mFocusedField username =
+
+viewUsername : Maybe String -> Maybe FormField.Field -> String -> Element Msg
+viewUsername mError mFocusedField username =
     FormField.inputText []
         { field = FormField.FieldUsername
         , fieldValue = username
-        , helperText = Nothing
+        , helperText =
+            mError
+                |> Maybe.map text
         , inputType = Input.text
         , inputTypeAttrs = []
         , label = el [ Font.italic ] <| text "username"
@@ -86,12 +98,14 @@ viewUsername mFocusedField username =
         }
 
 
-viewPassword : Maybe FormField.Field -> Bool -> String -> Element Msg
-viewPassword mFocusedField visible password =
+viewPassword : Maybe String -> Maybe FormField.Field -> Bool -> String -> Element Msg
+viewPassword mError mFocusedField visible password =
     FormField.inputPassword []
         { field = FormField.FieldCurrentPassword
         , fieldValue = password
-        , helperText = Nothing
+        , helperText =
+            mError
+                |> Maybe.map text
         , inputType = Input.currentPassword
         , inputTypeAttrs = []
         , label = el [ Font.italic ] <| text "password"
@@ -123,16 +137,18 @@ viewPassword mFocusedField visible password =
         }
 
 
-view : (User -> msg) -> (Element Msg -> Element msg) -> Model -> Element msg
-view createUser remap { username, password, visible, mFocusedField } =
+type alias LoginData =
+    { username : String
+    , passwordHash : HashedPassword
+    }
+
+
+view : (LoginData -> msg) -> (Element Msg -> Element msg) -> Model -> Element msg
+view createUser remap { username, password, visible, mFocusedField, mError } =
     Card.simpleWithTitle "Login" "" <|
         let
-            user : User
             user =
-                { id = 0
-                , firstName = ""
-                , lastName = ""
-                , username = username
+                { username = username
                 , passwordHash =
                     Hex
                         (password
@@ -140,12 +156,34 @@ view createUser remap { username, password, visible, mFocusedField } =
                             |> SHA.sha256
                             |> Binary.toHex
                         )
-                , isActive = True
                 }
+
+            fields =
+                let
+                    mUsernameError =
+                        case mError of
+                            Just UnknownUsername ->
+                                Just "Unknown username!"
+
+                            _ ->
+                                Nothing
+
+                    mPasswordError =
+                        case mError of
+                            Just WrongPassword ->
+                                Just "Wrong password!"
+
+                            _ ->
+                                Nothing
+                in
+                [ username |> viewUsername mUsernameError mFocusedField
+                , password |> viewPassword mPasswordError mFocusedField visible
+                ]
+                    |> List.map remap
+
+            controls =
+                [ Button.button [ Modifier.Primary ] (Just <| createUser user) "Submit"
+                ]
         in
-        column
-            [ width fill, height fill ]
-            [ remap (username |> viewUsername mFocusedField)
-            , remap (password |> viewPassword mFocusedField visible)
-            , Button.button [ Modifier.Primary ] (Just <| createUser user) "Submit"
-            ]
+        (fields ++ controls)
+            |> column [ width fill, height fill ]
