@@ -169,6 +169,7 @@ type Msg
     = NoOp
     | LoginMsg Login.Msg
     | LoginUser Login.LoginData
+    | LogoutUser
     | AddChore Chore.Chore
     | ChoreMsg Chore.Id Chore.Msg
     | ReceiveUsers (Result Http.Error (List User))
@@ -200,8 +201,8 @@ update msg model =
                 mUser =
                     find (.username >> (==) username) model.users
 
-                result : Maybe Login.Error
-                result =
+                loginError : Maybe Login.Error
+                loginError =
                     case mUser of
                         Just user ->
                             if user.passwordHash == passwordHash then
@@ -213,7 +214,7 @@ update msg model =
                         Nothing ->
                             Just Login.UnknownUsername
             in
-            case result of
+            case loginError of
                 Nothing ->
                     let
                         user : User
@@ -240,6 +241,9 @@ update msg model =
                                 |> (\m -> Login.update m model.login)
                     in
                     ( { model | login = login }, Cmd.map LoginMsg cmd )
+
+        LogoutUser ->
+            update (SetPage Home) { model | mUser = Nothing }
 
         AddChore chore ->
             simply { model | chores = chore :: model.chores }
@@ -290,11 +294,14 @@ update msg model =
                 setPage p =
                     ( { model | page = p }, pathChanged <| pagePath p )
             in
-            case model.mUser of
-                Just _ ->
+            case ( model.mUser, page ) of
+                ( Just _, Login ) ->
+                    setPage Home
+
+                ( Just _, _ ) ->
                     setPage page
 
-                Nothing ->
+                ( Nothing, _ ) ->
                     setPage Login
 
         SetSize size ->
@@ -309,7 +316,7 @@ update msg model =
 
 
 header : Model -> Element Msg
-header { page, size } =
+header { mUser, page, size } =
     column
         [ width fill
         , fill |> minimum 40 |> height
@@ -321,6 +328,15 @@ header { page, size } =
             [ text "header"
             , text <| Debug.toString size
             ]
+        , case mUser of
+            Just { username, firstName, lastName } ->
+                column []
+                    [ paragraph [] [ text <| Debug.toString ( username, firstName, lastName ) ]
+                    , Button.button [ Danger, Large ] (Just LogoutUser) "Log out"
+                    ]
+
+            Nothing ->
+                none
         ]
 
 
