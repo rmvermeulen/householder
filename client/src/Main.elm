@@ -135,8 +135,8 @@ init { path, size } =
                 |> List.indexedMap (\id ( title, description ) -> Chore.quick id title description)
 
         users =
-            [ User 0 "Bob" "Alderson" "bob03" (hashPassword "abcd") True
-            , User 1 "Karen" "Flim" "kf" (hashPassword "abcd") True
+            [ User 0 "Bob" "Alderson" "bob03" (hashPassword "abcd") True []
+            , User 1 "Karen" "Flim" "kf" (hashPassword "abcd") True []
             ]
 
         ( model, cmd ) =
@@ -229,6 +229,7 @@ update msg model =
                             , username = username
                             , passwordHash = passwordHash
                             , isActive = True
+                            , permissions = []
                             }
                     in
                     update (SetPage Home) { model | mUser = Just user }
@@ -296,13 +297,16 @@ update msg model =
             in
             case ( model.mUser, page ) of
                 ( Just _, Login ) ->
+                    -- already logged in, skip to home-page
                     setPage Home
 
-                ( Just _, _ ) ->
-                    setPage page
-
                 ( Nothing, _ ) ->
+                    -- only login allowed
                     setPage Login
+
+                ( Just { permissions }, _ ) ->
+                    -- only check permissions
+                    setPage page
 
         SetSize size ->
             simply { model | size = size }

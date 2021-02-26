@@ -17,6 +17,7 @@ type alias User =
     , username : String
     , passwordHash : HashedPassword
     , isActive : Bool
+    , permissions : List String
     }
 
 
@@ -34,6 +35,7 @@ decodeUser =
         |> required "username" Decode.string
         |> required "passwordHash" hashDecoder
         |> required "isActive" Decode.bool
+        |> required "permissions" (Decode.list Decode.string)
 
 
 encodeUser : User -> Encode.Value
