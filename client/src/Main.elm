@@ -6,19 +6,10 @@ import Chore
 import Debug
 import Element exposing (..)
 import Element.Background as Background
-import Element.Border as Border
-import Element.Font as Font
-import Element.Input as Input
-import Framework.Button as Button
-import Framework.Card as Card
 import Framework.Color as Color
-import Framework.FormField as FormField
 import Framework.Modifier exposing (Modifier(..))
-import Grid
 import Http
-import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline exposing (required)
-import Json.Encode as Encode
+import Json.Decode as Decode
 import Pages.Home as Home
 import Pages.Login as Login
 import Pages.Users as Users
@@ -26,7 +17,6 @@ import SHA
 import Table exposing (..)
 import Theme
 import User exposing (HashedPassword(..), User)
-import Widget
 
 
 port windowSize : (Size Int -> msg) -> Sub msg
