@@ -16,7 +16,7 @@ import Table
 import User exposing (HashedPassword(..), User)
 
 
-type alias Model =
+type alias Login =
     { username : String
     , password : String
     , visible : Bool
@@ -38,45 +38,45 @@ type Msg
     | SetError (Maybe Error)
 
 
-init : Model
+init : Login
 init =
-    Model "" "" False Nothing Nothing
+    Login "" "" False Nothing Nothing
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
-update msg model =
+update : Msg -> Login -> ( Login, Cmd msg )
+update msg login =
     let
         simply m =
             ( m, Cmd.none )
     in
     case msg of
         SetFocus field ->
-            simply { model | mFocusedField = Just field }
+            simply { login | mFocusedField = Just field }
 
         RemoveFocus field ->
             simply
-                { model | mFocusedField = Maybe.map (always field) model.mFocusedField }
+                { login | mFocusedField = Maybe.map (always field) login.mFocusedField }
 
         SetInput field input ->
             case field of
                 FormField.FieldUsername ->
-                    simply { model | username = input }
+                    simply { login | username = input }
 
                 FormField.FieldCurrentPassword ->
-                    simply { model | password = input }
+                    simply { login | password = input }
 
                 _ ->
-                    simply model
+                    simply login
 
         ToggleVisibility field ->
             if field == FormField.FieldCurrentPassword then
-                simply { model | visible = not model.visible }
+                simply { login | visible = not login.visible }
 
             else
-                simply model
+                simply login
 
         SetError mError ->
-            simply { model | mError = mError }
+            simply { login | mError = mError }
 
 
 viewUsername : Maybe String -> Maybe FormField.Field -> String -> Element Msg
@@ -143,7 +143,7 @@ type alias LoginData =
     }
 
 
-view : (LoginData -> msg) -> (Element Msg -> Element msg) -> Model -> Element msg
+view : (LoginData -> msg) -> (Element Msg -> Element msg) -> Login -> Element msg
 view createUser remap { username, password, visible, mFocusedField, mError } =
     Card.simpleWithTitle "Login" "" <|
         let

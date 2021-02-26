@@ -75,13 +75,13 @@ pathPage path =
 
 
 type alias Model =
-    { chores : List Chore.Model
+    { chores : List Chore.Chore
     , mText : Maybe String
     , users : List User
     , mUser : Maybe User
     , page : Page
     , size : Size Int
-    , login : Login.Model
+    , login : Login.Login
     }
 
 
@@ -171,7 +171,7 @@ type Msg
     = NoOp
     | LoginMsg Login.Msg
     | LoginUser Login.LoginData
-    | AddChore Chore.Model
+    | AddChore Chore.Chore
     | ChoreMsg Chore.Id Chore.Msg
     | ReceiveUsers (Result Http.Error (List User))
     | SetUsers (List User)

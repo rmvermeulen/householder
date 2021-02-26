@@ -39,7 +39,7 @@ type alias Id =
     Int
 
 
-type alias Model =
+type alias Chore =
     { id : Id
     , title : String
     , description : String
@@ -50,9 +50,9 @@ type alias Model =
     }
 
 
-quick : Id -> String -> String -> Model
+quick : Id -> String -> String -> Chore
 quick id title description =
-    Model id title description [] False Nothing Todo
+    Chore id title description [] False Nothing Todo
 
 
 type Msg
@@ -63,7 +63,7 @@ type Msg
     | SetStatus Status
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Chore -> ( Chore, Cmd Msg )
 update msg model =
     let
         simply m =
@@ -86,7 +86,7 @@ update msg model =
             simply { model | status = status }
 
 
-view : Model -> Element Msg
+view : Chore -> Element Msg
 view { title, description, status, expanded } =
     if expanded then
         Card.simpleWithTitle "Task" title <|
