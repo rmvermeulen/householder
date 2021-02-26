@@ -140,7 +140,14 @@ init { path, size } =
             ]
 
         ( model, cmd ) =
-            { empty | chores = chores, users = users, size = size }
+            { empty
+                | chores = chores
+                , users = users
+                , size = size
+
+                -- just log in automatically for now
+                , mUser = List.head users
+            }
                 |> update (SetPage <| Maybe.withDefault Home (pathPage path))
     in
     ( model
