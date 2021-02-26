@@ -1,9 +1,9 @@
 port module Main exposing (..)
 
-import Binary
 import Browser
 import Chore
 import Debug
+import Domain exposing (Size, find, hashPassword)
 import Element exposing (..)
 import Element.Background as Background
 import Framework.Color as Color
@@ -13,7 +13,6 @@ import Json.Decode as Decode
 import Pages.Home as Home
 import Pages.Login as Login
 import Pages.Users as Users
-import SHA
 import Table exposing (..)
 import Theme
 import User exposing (HashedPassword(..), User)
@@ -75,8 +74,16 @@ type alias Model =
     }
 
 
-type alias Size t =
-    { x : t, y : t }
+empty : Model
+empty =
+    { chores = []
+    , mText = Nothing
+    , users = []
+    , mUser = Nothing
+    , page = Login
+    , size = Size 0 0
+    , login = Login.init
+    }
 
 
 type alias Flags =
@@ -85,61 +92,50 @@ type alias Flags =
     }
 
 
-hashPassword : String -> HashedPassword
-hashPassword =
-    Binary.fromStringAsUtf8
-        >> SHA.sha256
-        >> Binary.toHex
-        >> Hex
-
-
 init : Flags -> ( Model, Cmd Msg )
 init { path, size } =
     let
+        chores =
+            [ ( "Some task"
+              , "This is just for testing. Don't worry about it."
+              )
+            , ( "Another task"
+              , "This is just for testing. Don't worry about it."
+              )
+            , ( "Some task"
+              , "This is just for testing. Don't worry about it."
+              )
+            , ( "Another task"
+              , "This is just for testing. Don't worry about it."
+              )
+            , ( "Some task"
+              , "This is just for testing. Don't worry about it."
+              )
+            , ( "Another task"
+              , "This is just for testing. Don't worry about it."
+              )
+            , ( "Some task"
+              , "This is just for testing. Don't worry about it."
+              )
+            , ( "Another task"
+              , "This is just for testing. Don't worry about it."
+              )
+            , ( "Some task"
+              , "This is just for testing. Don't worry about it."
+              )
+            , ( "Another task"
+              , "This is just for testing. Don't worry about it."
+              )
+            ]
+                |> List.indexedMap (\id ( title, description ) -> Chore.quick id title description)
+
+        users =
+            [ User 0 "Bob" "Alderson" "bob03" (hashPassword "abcd") True
+            , User 1 "Karen" "Flim" "kf" (hashPassword "abcd") True
+            ]
+
         ( model, cmd ) =
-            { chores =
-                [ ( "Some task"
-                  , "This is just for testing. Don't worry about it."
-                  )
-                , ( "Another task"
-                  , "This is just for testing. Don't worry about it."
-                  )
-                , ( "Some task"
-                  , "This is just for testing. Don't worry about it."
-                  )
-                , ( "Another task"
-                  , "This is just for testing. Don't worry about it."
-                  )
-                , ( "Some task"
-                  , "This is just for testing. Don't worry about it."
-                  )
-                , ( "Another task"
-                  , "This is just for testing. Don't worry about it."
-                  )
-                , ( "Some task"
-                  , "This is just for testing. Don't worry about it."
-                  )
-                , ( "Another task"
-                  , "This is just for testing. Don't worry about it."
-                  )
-                , ( "Some task"
-                  , "This is just for testing. Don't worry about it."
-                  )
-                , ( "Another task"
-                  , "This is just for testing. Don't worry about it."
-                  )
-                ]
-                    |> List.indexedMap (\id ( title, description ) -> Chore.quick id title description)
-            , mText = Nothing
-            , users =
-                [ User 0 "Bob" "Alderson" "bob03" (hashPassword "abcd") True
-                , User 1 "Karen" "Flim" "kf" (hashPassword "abcd") True
-                ]
-            , mUser = Nothing
-            , page = Login
-            , size = size
-            , login = Login.init
-            }
+            { empty | chores = chores, users = users, size = size }
                 |> update (SetPage <| Maybe.withDefault Home (pathPage path))
     in
     ( model
@@ -167,11 +163,6 @@ type Msg
     | SetUsers (List User)
     | SetPage Page
     | SetSize (Size Int)
-
-
-find : (item -> Bool) -> List item -> Maybe item
-find pred =
-    List.filter pred >> List.head
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
