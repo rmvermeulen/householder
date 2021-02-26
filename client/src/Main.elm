@@ -3,7 +3,7 @@ port module Main exposing (..)
 import Browser
 import Chore
 import Debug
-import Domain exposing (Size, find, hashPassword)
+import Domain exposing (Api(..), Size, find, hashPassword)
 import Element exposing (..)
 import Element.Background as Background
 import Framework.Color as Color
@@ -71,6 +71,7 @@ type alias Model =
     , page : Page
     , size : Size Int
     , login : Login.Login
+    , api : Api
     }
 
 
@@ -83,6 +84,7 @@ empty =
     , page = Login
     , size = Size 0 0
     , login = Login.init
+    , api = Mocked
     }
 
 

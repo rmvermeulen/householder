@@ -5,6 +5,9 @@ import SHA
 import User exposing (HashedPassword(..))
 
 
+type Api
+    = Mocked
+    | Localhost Int
 
 
 type alias Size t =
