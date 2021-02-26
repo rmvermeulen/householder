@@ -6,6 +6,9 @@ import Debug
 import Domain exposing (Api(..), Size, find, hashPassword)
 import Element exposing (..)
 import Element.Background as Background
+import Element.Font as Font
+import Element.Input as Input
+import Framework.Button as Button
 import Framework.Color as Color
 import Framework.Modifier exposing (Modifier(..))
 import Http
@@ -165,6 +168,7 @@ type Msg
     | SetUsers (List User)
     | SetPage Page
     | SetSize (Size Int)
+    | SetApi Api
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -289,6 +293,9 @@ update msg model =
         SetSize size ->
             simply { model | size = size }
 
+        SetApi api ->
+            simply { model | api = api }
+
 
 
 ---- VIEW ----
@@ -311,14 +318,24 @@ header { page, size } =
 
 
 footer : Model -> Element Msg
-footer { mText } =
+footer { mText, api } =
+    let
+        mocked =
+            api == Mocked
+    in
     row
         [ width fill
         , fill |> minimum 40 |> height
         , Background.color Theme.header
         , padding 8
+        , Font.color Color.black
         ]
-        [ mText
+        [ if mocked then
+            Button.button [ Medium, Danger ] (Just <| SetApi Server) "Mocked"
+
+          else
+            Button.button [ Medium, Primary ] (Just <| SetApi Mocked) "Server"
+        , mText
             |> Maybe.map text
             |> Maybe.withDefault none
         ]

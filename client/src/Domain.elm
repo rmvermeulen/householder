@@ -7,7 +7,7 @@ import User exposing (HashedPassword(..))
 
 type Api
     = Mocked
-    | Localhost Int
+    | Server
 
 
 type alias Size t =
