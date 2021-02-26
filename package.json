@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "lerna run start:dev --parallel",
-    "postinstall": "husky install"
+    "postinstall": "husky install",
+    "test": "lerna run test --parallel"
   }
 }
